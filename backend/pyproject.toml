@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dev-ghost-parser"
+version = "0.1.0"
+description = "Static architecture analysis system for software codebases"
+requires-python = ">=3.11"
+dependencies = [
+    "tree-sitter==0.24.0",
+    "tree-sitter-php==0.23.4",
+    "tree-sitter-javascript==0.23.1",
+    "tree-sitter-typescript==0.23.2",
+    "tree-sitter-python==0.23.6",
+    "tree-sitter-ruby==0.23.1",
+    "tree-sitter-go==0.23.4",
+    "tree-sitter-rust==0.23.2",
+    "tree-sitter-java==0.23.5",
+    "tree-sitter-c-sharp==0.23.1",
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "hypothesis==6.123.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=dev_ghost_parser --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["src/dev_ghost_parser"]
+branch = true

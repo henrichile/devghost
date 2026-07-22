@@ -1,0 +1,88 @@
+# =============================================================================
+# Python / Backend
+# =============================================================================
+
+# Virtual environments
+backend/venv/
+backend/.venv/
+backend/env/
+
+# Byte-compiled / optimized / DLL files
+backend/**/__pycache__/
+backend/**/*.py[cod]
+backend/**/*$py.class
+
+# Distribution / packaging
+backend/build/
+backend/dist/
+backend/**/*.egg-info/
+backend/**/*.egg
+
+# Testing
+backend/.hypothesis/
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+
+# =============================================================================
+# Node / Frontend
+# =============================================================================
+
+# Dependencies
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+
+# Vite
+frontend/.vite/
+
+# Environment variables
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# =============================================================================
+# IDE / Editors
+# =============================================================================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# =============================================================================
+# OS Files
+# =============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# =============================================================================
+# Docker
+# =============================================================================
+
+docker-compose.override.yml
+
+# =============================================================================
+# Misc
+# =============================================================================
+
+*.log
+*.tmp
+.env
