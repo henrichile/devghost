@@ -424,6 +424,10 @@ async def analyze_stream(request: AnalyzeRequest) -> StreamingResponse:
             pipeline_task = asyncio.create_task(orch.run_all())
 
             # Consume events from the queue until the pipeline completes
+            # Send SSE keepalive comments every 15s to prevent proxy/client timeout
+            heartbeat_interval = 15  # seconds
+            seconds_since_last_event = 0
+
             while not pipeline_task.done():
                 try:
                     event = await asyncio.wait_for(
@@ -433,8 +437,13 @@ async def analyze_stream(request: AnalyzeRequest) -> StreamingResponse:
                     if event is None:
                         break
                     yield serialize_event_to_sse(event)
+                    seconds_since_last_event = 0
                 except asyncio.TimeoutError:
-                    # No event available yet, check if pipeline is done
+                    # No event available yet — send keepalive if needed
+                    seconds_since_last_event += 1
+                    if seconds_since_last_event >= heartbeat_interval:
+                        yield ": keepalive\n\n"
+                        seconds_since_last_event = 0
                     continue
 
             # Drain any remaining events in the queue
