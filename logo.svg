@@ -1,33 +1,29 @@
-<svg width="280" height="80" viewBox="0 0 280 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Ghost body -->
+<svg width="360" height="90" viewBox="0 0 360 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ghost body (larger) -->
   <path
-    d="M40 12C34.477 12 30 16.477 30 22v10c0 0.5 0.5 1 1 0.5l2-2 2 2 2-2 2 2 2-2 2 2 2-2 2 2c0.5 0.5 1 0 1-0.5V22c0-5.523-4.477-10-10-10z"
+    d="M45 10C37.268 10 31 16.268 31 24v14c0 0.7 0.7 1.4 1.4 0.7l2.8-2.8 2.8 2.8 2.8-2.8 2.8 2.8 2.8-2.8 2.8 2.8 2.8-2.8 2.8 2.8c0.7 0.7 1.4 0 1.4-0.7V24c0-7.732-6.268-14-14-14z"
     fill="url(#ghost-grad)"
     opacity="0.95"
   />
   <!-- Left eye -->
-  <circle cx="36.5" cy="22" r="2" fill="#1e293b" />
+  <circle cx="40" cy="23" r="2.8" fill="#1e293b" />
   <!-- Right eye -->
-  <circle cx="43.5" cy="22" r="2" fill="#1e293b" />
+  <circle cx="50" cy="23" r="2.8" fill="#1e293b" />
   <!-- Code brackets </> -->
   <path
-    d="M35 27l-2 1.5 2 1.5M45 27l2 1.5-2 1.5M38.5 31l3-5"
+    d="M38 30l-3 2.2 3 2.2M52 30l3 2.2-3 2.2M42.5 36l4.5-7.5"
     stroke="#1e293b"
-    stroke-width="1.2"
+    stroke-width="1.6"
     stroke-linecap="round"
     stroke-linejoin="round"
     opacity="0.7"
   />
   <!-- Logotype: dev.ghost() -->
-  <text x="62" y="30" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-size="18" font-weight="700" letter-spacing="-0.5">
+  <text x="75" y="38" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-size="28" font-weight="700" letter-spacing="-0.5">
     <tspan fill="#818cf8">dev</tspan><tspan fill="#64748b">.</tspan><tspan fill="#f1f5f9">ghost</tspan><tspan fill="#64748b">()</tspan>
   </text>
-  <!-- Subtitle -->
-  <text x="62" y="48" font-family="'Inter', system-ui, sans-serif" font-size="9" fill="#64748b" letter-spacing="0.5">
-    AUTONOMOUS REPO PARSER
-  </text>
   <defs>
-    <linearGradient id="ghost-grad" x1="30" y1="12" x2="50" y2="36" gradientUnits="userSpaceOnUse">
+    <linearGradient id="ghost-grad" x1="31" y1="10" x2="59" y2="42" gradientUnits="userSpaceOnUse">
       <stop stop-color="#818cf8" />
       <stop offset="1" stop-color="#6366f1" />
     </linearGradient>
