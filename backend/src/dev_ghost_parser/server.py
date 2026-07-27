@@ -248,7 +248,7 @@ async def analyze(request: AnalyzeRequest) -> Any:
             repo_path=tmp_dir,
             llm_client=llm_client,
             event_queue=event_queue,
-            global_timeout_seconds=300.0,
+            global_timeout_seconds=600.0,
         )
 
         try:

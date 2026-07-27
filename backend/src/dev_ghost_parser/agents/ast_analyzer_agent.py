@@ -34,8 +34,8 @@ class ASTAnalyzerAgent(BaseAgent):
 
     @property
     def timeout_seconds(self) -> float:
-        """AST analysis timeout: 90 seconds."""
-        return 90.0
+        """AST analysis timeout: 300 seconds (large repos need more time)."""
+        return 300.0
 
     @property
     def retry_policy(self) -> RetryPolicy:
