@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" alt="DevGhost" width="360" />
+  <img src="logo.svg" alt="DevGhost" width="500" />
 </p>
 
 <h1 align="center">DevGhost — Agente Autónomo de Análisis de Arquitectura de Software</h1>
