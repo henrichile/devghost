@@ -134,7 +134,7 @@ class SystemReporterAgent(BaseAgent):
             Success result with SystemReportResult data, or failure result with error message.
         """
         try:
-            await self.emit_progress("Scanning for configuration files...")
+            await self.emit_progress("Buscando archivos de configuración...")
 
             configs = self._scan_config_files(context.repo_path)
 
@@ -152,17 +152,17 @@ class SystemReporterAgent(BaseAgent):
                     data=asdict(report),
                 )
 
-            await self.emit_progress("Detecting technology stack...")
+            await self.emit_progress("Detectando stack tecnológico...")
 
             tech_stack = self._extract_tech_stack(configs)
 
-            await self.emit_progress("Generating setup instructions...")
+            await self.emit_progress("Generando instrucciones de instalación...")
 
             instructions = await self._generate_instructions(
                 tech_stack, configs, context
             )
 
-            await self.emit_progress("Generating project description...")
+            await self.emit_progress("Generando descripción del proyecto...")
 
             description = await self._generate_description(
                 tech_stack, context.repo_path, context

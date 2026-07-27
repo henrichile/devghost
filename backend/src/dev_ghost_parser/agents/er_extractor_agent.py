@@ -50,17 +50,17 @@ class ERExtractorAgent(BaseAgent):
             Success result with ER model data, or failure result with error message.
         """
         try:
-            await self.emit_progress("Scanning for ORM model definitions...")
+            await self.emit_progress("Buscando definiciones de modelos ORM...")
 
             extractor = ER_Extractor()
 
-            await self.emit_progress("Parsing entity attributes and relationships...")
+            await self.emit_progress("Analizando atributos y relaciones...")
 
             # ER_Extractor.extract() is synchronous — run in a thread
             # to avoid blocking the event loop.
             result = await asyncio.to_thread(extractor.extract, context.repo_path)
 
-            await self.emit_progress("Building ER diagram data...")
+            await self.emit_progress("Construyendo diagrama ER...")
 
             # Convert ERResult to the same format as Output_Serializer
             # Frontend expects "from"/"to" (not "from_entity"/"to_entity"), "primaryKey" etc.

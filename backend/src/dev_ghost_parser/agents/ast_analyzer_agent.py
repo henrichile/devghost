@@ -56,13 +56,13 @@ class ASTAnalyzerAgent(BaseAgent):
             Success result with code flow data, or failure result with error message.
         """
         try:
-            await self.emit_progress("Scanning directory structure...")
+            await self.emit_progress("Escaneando estructura de directorios...")
 
             analyzer = Code_Flow_Analyzer(llm_client=context.llm_client)
 
-            await self.emit_progress("Extracting import dependencies...")
+            await self.emit_progress("Extrayendo dependencias de imports...")
 
-            await self.emit_progress("Classifying architectural patterns...")
+            await self.emit_progress("Clasificando patrones arquitectónicos...")
 
             # Code_Flow_Analyzer.analyze() is synchronous — run in a thread
             # to avoid blocking the event loop.

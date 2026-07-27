@@ -84,8 +84,8 @@ function InitialHeroState({ onAnalyze }: HeroProps) {
 
           {/* Subtítulo */}
           <p className="text-slate-400 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-            Ingeniería inversa automática: visualiza la arquitectura AST, diagrama modelos de base de datos y
-            escucha tours guiados por voz en vivo.
+            Análisis profundo con IA: grafo de arquitectura, auditoría de código, documentación técnica,
+            casos de uso UML e historias de usuario — todo automatizado.
           </p>
 
           {/* Repositorios de prueba */}
@@ -137,31 +137,31 @@ function InitialHeroState({ onAnalyze }: HeroProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-8 text-left">
             <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/40 transition-all">
               <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-3 text-purple-400">
-                🗺️
+                🧠
               </div>
-              <h3 className="font-semibold text-slate-200 text-sm mb-1">Code Flow Graph</h3>
+              <h3 className="font-semibold text-slate-200 text-sm mb-1">Análisis Inteligente</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Mapa AST interactivo con jerarquía de controladores, servicios, repositorios y métodos.
+                5 sub-agentes de IA analizan en paralelo: AST, ER, auditoría de código, documentación y stack tecnológico.
               </p>
             </div>
 
             <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 transition-all">
               <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-3 text-cyan-400">
-                🗄️
+                📄
               </div>
-              <h3 className="font-semibold text-slate-200 text-sm mb-1">Diagramas ER</h3>
+              <h3 className="font-semibold text-slate-200 text-sm mb-1">Documentación Automática</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Mapeo automático de tablas, entidades, claves primarias y relaciones del modelo de datos.
+                Genera C4, ADR, RBAC, plan de testing, casos de uso UML e historias de usuario con estándar IEEE.
               </p>
             </div>
 
             <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-blue-500/40 transition-all">
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-3 text-blue-400">
-                🎙️
+                🔍
               </div>
-              <h3 className="font-semibold text-slate-200 text-sm mb-1">Audio Tour Sincronizado</h3>
+              <h3 className="font-semibold text-slate-200 text-sm mb-1">Auditoría por Componente</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Narración hablada en español con auto-pan y resaltado neón dinámico en los nodos explicados.
+                Inspección profunda de cada nodo: código fuente, calidad SOLID, vulnerabilidades y recomendaciones.
               </p>
             </div>
           </div>
