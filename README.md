@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="logo.svg" alt="DevGhost Parser" width="120" />
+  <img src="logo.svg" alt="DevGhost" width="280" />
 </p>
 
-<h1 align="center">DevGhost Parser</h1>
+<h1 align="center">DevGhost — Agente Autónomo de Análisis de Arquitectura de Software</h1>
 
 <p align="center">
-  <strong>Análisis estático de arquitectura para repositorios de código</strong><br/>
-  Clona, analiza y documenta la estructura de cualquier codebase automáticamente.
+  <strong>Entiende cualquier Codebase en segundos.</strong><br/>
+  5 sub-agentes de IA analizan repositorios en paralelo: arquitectura, modelo de datos, auditoría de código, documentación técnica y stack tecnológico.
 </p>
 
 <p align="center">
@@ -14,13 +14,36 @@
   <img src="https://img.shields.io/badge/react-19-61dafb?logo=react" alt="React 19" />
   <img src="https://img.shields.io/badge/fastapi-0.115-009688?logo=fastapi" alt="FastAPI" />
   <img src="https://img.shields.io/badge/docker-compose-2496ED?logo=docker" alt="Docker" />
+  <img src="https://img.shields.io/badge/tests-740+-10b981?logo=pytest" alt="740+ Tests" />
+  <img src="https://img.shields.io/badge/built%20with-Kiro-818cf8" alt="Built with Kiro" />
 </p>
 
 ---
 
-## ¿Qué es DevGhost Parser?
+## ¿Qué es DevGhost?
 
-DevGhost Parser es un sistema de análisis estático de arquitectura que, dado un repositorio Git, produce automáticamente:
+DevGhost es un agente autónomo que realiza ingeniería inversa completa sobre repositorios de código. Solo necesitas pegar la URL de un repositorio público de GitHub y en menos de 2 minutos obtienes:
+
+- 🏗️ **Grafo de arquitectura interactivo** — Mapa visual navegable con todos los componentes, dependencias y patrones del sistema
+- 🔍 **Auditoría de código por componente** — Evaluación SOLID, vulnerabilidades de seguridad, deuda técnica y recomendaciones con código fuente real
+- 📄 **Documentación técnica completa** — C4, ADR, RBAC, plan de testing, casos de uso UML con estándar IEEE
+- 🗄️ **Modelo entidad-relación** — Diagrama ER interactivo con entidades, atributos y relaciones detectadas automáticamente
+- ⚙️ **Detección de stack tecnológico** — Lenguajes, frameworks, bases de datos e instrucciones de setup
+
+**Sin configuración. Sin instalación. Solo una URL.**
+
+## ¿Qué problema soluciona?
+
+Cuando un desarrollador se incorpora a un proyecto existente, necesita entender una codebase ajena para una auditoría, migración o integración, el proceso manual de leer código y documentar la arquitectura puede tomar días o semanas. DevGhost resuelve esto en minutos — eliminando la fricción de onboarding y reduciendo drásticamente el tiempo de comprensión de cualquier repositorio.
+
+## Construido con Kiro
+
+Este proyecto fue desarrollado al 100% usando **spec-driven development con Kiro**:
+
+- 📋 **Requirements** → 9 requerimientos formales con acceptance criteria
+- 🏗️ **Design** → Arquitectura DAG con 15 correctness properties formales
+- ✅ **Tasks** → 31 tareas ejecutadas en 7 waves paralelas
+- 🧪 **Testing** → Property-based testing con Hypothesis (740+ tests, 15 propiedades universales)
 
 | Artefacto | Descripción |
 |-----------|-------------|
@@ -33,21 +56,40 @@ DevGhost Parser es un sistema de análisis estático de arquitectura que, dado u
 | 📊 **Grafo Code Flow** | Grafo dirigido de nodos arquitectónicos y dependencias |
 | 🗄️ **Modelo ER** | Diagrama entidad-relación interactivo |
 
-## Arquitectura
+## Arquitectura Multi-Agente
+
+DevGhost usa un motor de ejecución DAG (Directed Acyclic Graph) que coordina 5 sub-agentes especializados:
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    Frontend (React)                   │
-│  React 19 · TypeScript · Vite · TailwindCSS          │
-│  @xyflow/react · Mermaid.js · Zustand                │
-└──────────────────────┬──────────────────────────────┘
-                       │ SSE / REST
-┌──────────────────────┴──────────────────────────────┐
-│                   Backend (Python)                    │
-│  FastAPI · tree-sitter · LLM (OpenAI-compatible)     │
-│  Agentes: CodeFlow · ER · Summary · Artifacts        │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    Frontend (React + ReactFlow)                   │
+│  React 19 · TypeScript · Vite · TailwindCSS · Mermaid.js         │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ SSE Streaming (tiempo real)
+┌──────────────────────────┴──────────────────────────────────────┐
+│              DependencyGraphOrchestrator (FastAPI)                │
+│  ├─ Concurrency Limiter (asyncio.Semaphore)                      │
+│  ├─ Retry con Backoff Exponencial por agente                     │
+│  ├─ Timeout Individual + Global Pipeline Timeout                 │
+│  └─ Agregación con Prioridad + Resultados Parciales              │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────┴──────────────────────────────────────┐
+│                    Sub-Agentes de IA                              │
+│  🏗️ AST Analyzer     → Grafo de arquitectura (tree-sitter)       │
+│  🗄️ ER Extractor     → Modelo entidad-relación                   │
+│  🔍 Code Auditor     → Auditoría SOLID + código fuente           │
+│  📄 Doc Generator    → C4, ADR, RBAC, Testing, Casos de Uso UML │
+│  ⚙️ System Reporter  → Stack tecnológico + instrucciones         │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+### Pipeline de Ejecución
+
+1. **Fase Fundacional**: El AST Analyzer ejecuta primero (obligatorio) — los demás dependen de su resultado
+2. **Fase Paralela**: Los 4 agentes restantes ejecutan en paralelo respetando el DAG de dependencias
+3. **Tolerancia a Fallos**: Si un agente falla, los demás continúan y entregan resultados parciales
+4. **Streaming**: Cada agente emite eventos SSE en tiempo real con progreso
 
 ## Estructura del Monorepo
 
