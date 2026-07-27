@@ -53,33 +53,55 @@ function normalizeMarkdown(raw: string): string {
   text = text.replace(/^```(?:markdown|md)?\n?/i, '');
   text = text.replace(/\n?```\s*$/i, '');
 
-  // FIX: Tables on a single line — split rows that are concatenated
-  // Pattern: "| val1 | val2 | | val3 | val4 |" (double pipe = row separator)
-  // Also handles: "| header1 | header2 || --- | --- || val1 | val2 |"
-  text = text.replace(/\|\s*\|\s*(?=[|/\w])/g, '|\n|');
+  // FIX: Detect unwrapped mermaid code (starts with "mermaid " or line starts with diagram type)
+  // Pattern: "mermaid classDiagram ..." or "mermaid flowchart ..." without backticks
+  text = text.replace(
+    /^(mermaid\s+)(classDiagram|flowchart|sequenceDiagram|graph|erDiagram|pie|gantt)\b/gm,
+    '```mermaid\n$2'
+  );
+  // Also handle lines that start directly with a diagram type without "mermaid" prefix
+  // but only if it's at the very start of the content
+  if (/^(classDiagram|sequenceDiagram|erDiagram)\s/m.test(text) && !text.includes('```mermaid')) {
+    const diagramMatch = text.match(/^(classDiagram|sequenceDiagram|erDiagram)[\s\S]*?(?=\n\n|\n#|$)/m);
+    if (diagramMatch) {
+      text = text.replace(diagramMatch[0], '```mermaid\n' + diagramMatch[0] + '\n```');
+    }
+  }
 
-  // FIX: Separator rows jammed together with data rows
-  // "| header |---|---|| data |" patterns
-  text = text.replace(/\|(\s*---+\s*\|)+\s*\|/g, (match) => match.replace(/\|\s*\|/, '|\n|'));
-
-  // FIX: If a line has many pipe groups that look like a table row repeated,
-  // split it. Detect pattern like "| ... | | ... |" where || means new row
+  // FIX: Tables that come as a single line with multiple | | patterns
+  // Detect lines that have the pattern of concatenated table rows
   text = text.split('\n').map(line => {
-    // If line starts with | and has "| |" or "||" patterns (row concatenation)
-    if (line.startsWith('|') && (line.includes('| |') || line.includes('||'))) {
-      // Split on "| |" (row boundary) — but not on "| --- |" separator content
-      const parts = line.split(/\|\s+\|(?!\s*-)/);
-      if (parts.length > 2) {
-        // Likely concatenated rows — reconstruct
-        return parts.map(p => {
-          const trimmed = p.trim();
-          if (!trimmed.startsWith('|')) return '| ' + trimmed;
-          return trimmed;
-        }).filter(p => p.trim() !== '|' && p.trim() !== '').join('\n');
+    const trimmed = line.trim();
+    // If line starts with | and has pipe-separated content that looks like multiple rows
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      // Count pipe groups — if there are way too many pipes for a single row, split
+      const pipeCount = (trimmed.match(/\|/g) || []).length;
+      // A normal row has N+1 pipes for N columns. If we detect a "| |" pattern (empty cell at boundary)
+      // this might be concatenated rows
+      if (pipeCount > 10 && trimmed.includes('| |')) {
+        // Try to detect column count from separator row pattern
+        const separatorMatch = trimmed.match(/(\|\s*[-:]+\s*)+\|/);
+        if (separatorMatch) {
+          const sepCols = (separatorMatch[0].match(/\|/g) || []).length - 1;
+          // Split the line into rows based on expected column count
+          const cells = trimmed.split('|').filter(c => c !== '');
+          const rows: string[] = [];
+          for (let i = 0; i < cells.length; i += sepCols) {
+            const rowCells = cells.slice(i, i + sepCols);
+            if (rowCells.length > 0) {
+              rows.push('| ' + rowCells.join(' | ') + ' |');
+            }
+          }
+          return rows.join('\n');
+        }
       }
     }
     return line;
   }).join('\n');
+
+  // FIX: Separator rows on same line as data - "| header1 | header2 || --- | --- |"
+  text = text.replace(/\|\s*\|\s*(?=---)/g, '|\n|');
+  text = text.replace(/---\s*\|\s*\|(?!\s*-)/g, '---|\n|');
 
   // Ensure separator row (|---|) has its own line
   text = text.replace(/([^\n])((?:\|[\s:]*-{2,}[\s:]*)+\|)/g, '$1\n$2');
@@ -102,7 +124,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const parts = splitContent(normalized);
 
   return (
-    <div className="bg-white text-gray-800 p-6 rounded-xl border border-gray-200 shadow-sm space-y-1 overflow-x-auto">
+    <div className="bg-white text-gray-800 p-6 rounded-xl border border-gray-200 shadow-sm space-y-2 overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_table]:my-3 [&_table]:text-[12px]">
       {parts.map((part, idx) => {
         if (part.type === 'html') {
           return (

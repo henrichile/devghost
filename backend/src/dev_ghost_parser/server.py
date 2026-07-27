@@ -293,6 +293,7 @@ async def analyze(request: AnalyzeRequest) -> Any:
             "rbacMatrix": raw_artifacts.get("rbac_matrix"),
             "testPlan": raw_artifacts.get("test_plan"),
             "useCases": raw_artifacts.get("use_cases"),
+            "useCasesDoc": raw_artifacts.get("use_cases_doc"),
         } if raw_artifacts else {}
         # code_auditor data goes to audit field in AnalysisResult but the API
         # exposes it as nodeInspections. Use node_inspections first (may be
@@ -482,6 +483,7 @@ async def analyze_stream(request: AnalyzeRequest) -> StreamingResponse:
                 "rbacMatrix": raw_artifacts.get("rbac_matrix"),
                 "testPlan": raw_artifacts.get("test_plan"),
                 "useCases": raw_artifacts.get("use_cases"),
+                "useCasesDoc": raw_artifacts.get("use_cases_doc"),
             } if raw_artifacts else {}
             # code_auditor data goes to audit field in AnalysisResult but the API
             # exposes it as nodeInspections. Use node_inspections first, fall back to audit.
@@ -789,43 +791,43 @@ async def analyze_method(request: AnalyzeMethodRequest) -> Any:
     system_prompt = (
         "Eres un analista de código senior con experiencia en arquitectura de software, "
         "patrones de diseño y seguridad. Genera un análisis EXHAUSTIVO y PROFESIONAL.\n\n"
-        "REGLAS DE FORMATO:\n"
+        "REGLAS DE FORMATO ESTRICTAS:\n"
         "- Responde en español con Markdown para headings/texto\n"
         "- Para TODAS las tablas usa HTML: <table><thead><tr><th>...</th></tr></thead><tbody><tr><td>...</td></tr></tbody></table>\n"
-        "- Para diagramas de flujo usa bloques ```mermaid con sintaxis válida (flowchart LR)\n"
-        "- NUNCA uses tablas markdown (| col |). SIEMPRE HTML tables.\n\n"
+        "- Para diagramas usa EXCLUSIVAMENTE bloques ```mermaid con sintaxis Mermaid válida\n"
+        "- NUNCA uses plantUML (@startuml, @enduml). SIEMPRE Mermaid.\n"
+        "- NUNCA uses tablas markdown (| col |). SIEMPRE tablas HTML.\n"
+        "- NUNCA uses comentarios // para explicar. Usa texto Markdown normal.\n"
+        "- Separa SIEMPRE las secciones con saltos de línea\n\n"
         "REGLA CRÍTICA SOBRE CÓDIGO:\n"
-        "- Si recibes 'CODIGO FUENTE REAL', muéstralo EXACTAMENTE como fue proporcionado en un bloque de código.\n"
-        "- NO inventes, NO modifiques, NO simplifiques el código real.\n"
-        "- Si NO hay código real disponible, indica que no se pudo extraer.\n\n"
+        "- Si recibes 'CODIGO FUENTE REAL', muéstralo en un bloque ```typescript (o el lenguaje correcto).\n"
+        "- NO inventes ni modifiques el código real.\n"
+        "- Si NO hay código real, indica: 'Código fuente no disponible.'\n\n"
         "ESTRUCTURA OBLIGATORIA:\n\n"
-        "## Análisis de `{nombre_función}`\n\n"
+        "## Análisis de `nombre_función`\n\n"
         "### Código Fuente\n"
-        "Muestra el código real proporcionado en un bloque con el lenguaje correcto.\n"
-        "Si no hay código, escribe: 'Código fuente no disponible.'\n\n"
+        "Bloque de código con el lenguaje correcto.\n\n"
         "### Propósito y Responsabilidad\n"
-        "Explica detalladamente QUÉ hace esta función, POR QUÉ existe, y CÓMO se integra "
-        "con el resto del componente. Menciona el patrón de diseño que implementa.\n\n"
+        "QUÉ hace, POR QUÉ existe, patrón de diseño que implementa.\n\n"
         "### Parámetros y Retorno\n"
-        "Tabla HTML (Parámetro, Tipo, Descripción, Validaciones). "
-        "Luego documenta el tipo de retorno y posibles excepciones.\n\n"
+        "Tabla HTML con: Parámetro, Tipo, Descripción, Validaciones.\n\n"
         "### Flujo de Ejecución\n"
-        "Tabla HTML detallada (Paso, Acción, Componentes Involucrados, Posibles Fallos). "
-        "Luego diagrama ```mermaid (flowchart LR) mostrando el flujo con decisiones.\n\n"
+        "Tabla HTML con: Paso, Acción, Componentes, Fallos posibles.\n"
+        "Luego un diagrama Mermaid de secuencia:\n"
+        "```mermaid\n"
+        "sequenceDiagram\n"
+        "    participant Cliente\n"
+        "    participant Servicio\n"
+        "    Cliente->>Servicio: llamada()\n"
+        "    Servicio-->>Cliente: respuesta\n"
+        "```\n\n"
         "### Análisis de Calidad\n"
-        "Tabla HTML (Criterio, Nota 1-10, Justificación Detallada).\n"
-        "Criterios obligatorios: Legibilidad, Mantenibilidad, Robustez, "
-        "Principio de Responsabilidad Única, Manejo de Errores, Testabilidad.\n\n"
+        "Tabla HTML: Criterio, Nota 1-10, Justificación.\n\n"
         "### Vulnerabilidades y Riesgos\n"
-        "Tabla HTML (Severidad 🔴🟡🟢, Tipo, Descripción, Vector de Ataque, Mitigación).\n"
-        "Evalúa: inyección, auth bypass, race conditions, data leaks, DoS.\n\n"
-        "### Dependencias y Acoplamiento\n"
-        "Explica de qué depende esta función, cuánto acoplamiento tiene, "
-        "y si viola el Principio de Inversión de Dependencias.\n\n"
+        "Tabla HTML: Severidad, Tipo, Descripción, Mitigación.\n\n"
         "### Mejoras Recomendadas\n"
-        "Lista PRIORIZADA (impacto/esfuerzo) con ejemplos de código corregido.\n"
-        "Cada mejora debe incluir: problema actual, solución propuesta, beneficio esperado.\n\n"
-        "SÉ EXHAUSTIVO. Este análisis debe ser digno de una code review profesional."
+        "Lista priorizada con código corregido de ejemplo.\n\n"
+        "SÉ EXHAUSTIVO y BIEN FORMATEADO."
     )
 
     user_prompt = (

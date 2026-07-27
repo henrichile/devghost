@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap');
+
 @theme {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Roboto', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --color-surface-primary: #060911;
   --color-surface-secondary: #0A0E17;
@@ -21,6 +23,29 @@ html, body, #root {
   overflow: hidden;
   background: var(--color-surface-primary);
   font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Global text sizing normalization */
+p, span, div, li, td, th, label, button {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Panel lateral - textos más legibles */
+aside p, aside span, aside div {
+  font-size: 12px;
+}
+
+/* Nodos del grafo - más compactos y legibles */
+.react-flow__node {
+  font-size: 12px !important;
+}
+
+/* React Flow - nodos más juntos */
+.react-flow__viewport {
+  transform-origin: center center;
 }
 
 /* React Flow overrides for dark theme */
@@ -102,4 +127,10 @@ html, body, #root {
 
 .glow-purple {
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.15), 0 0 60px rgba(139, 92, 246, 0.05);
+}
+
+/* Shimmer animation for progress bar */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
 }

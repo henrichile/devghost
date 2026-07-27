@@ -142,8 +142,8 @@ function CustomNode({ data }: NodeProps<Node<CodeFlowNodeData>>) {
 
         {/* Sublabel (description as path) */}
         {data.description && (
-          <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">
-            {data.description}
+          <div className="text-[10px] text-slate-500 mt-0.5 leading-snug line-clamp-2 overflow-hidden">
+            {data.description.length > 80 ? data.description.slice(0, 80) + '...' : data.description}
           </div>
         )}
       </div>
@@ -169,7 +169,7 @@ function layoutNodes(apiNodes: CodeFlowNode[], apiEdges: CodeFlowEdge[]) {
 
   if (useDagre) {
     const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-    g.setGraph({ rankdir: 'TB', nodesep: 180, ranksep: 220, edgesep: 80 });
+    g.setGraph({ rankdir: 'TB', nodesep: 100, ranksep: 140, edgesep: 50 });
 
     apiNodes.forEach((node) => {
       g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
@@ -256,7 +256,7 @@ function ViewportPanner({ nodeCount }: { nodeCount: number }) {
   useEffect(() => {
     if (nodeCount > 0) {
       const timer = setTimeout(() => {
-        fitView({ padding: 0.1, duration: 800, minZoom: 0.4 });
+        fitView({ padding: 0.15, duration: 800, minZoom: 0.6 });
       }, 150);
       return () => clearTimeout(timer);
     }
@@ -340,9 +340,10 @@ export function CodeFlowGraph({ data }: CodeFlowGraphProps) {
           onNodeMouseEnter={onNodeMouseEnter}
           onNodeMouseLeave={onNodeMouseLeave}
           fitView
-          fitViewOptions={{ padding: 0.1, minZoom: 0.4 }}
-          minZoom={0.15}
+          fitViewOptions={{ padding: 0.15, minZoom: 0.6 }}
+          minZoom={0.3}
           maxZoom={3}
+          defaultViewport={{ x: 0, y: 0, zoom: 0.75 }}
           proOptions={{ hideAttribution: true }}
         >
           <ViewportPanner nodeCount={styledNodes.length} />

@@ -40,7 +40,7 @@ _SOURCE_PATTERNS = (
 _SKIP_DIRS = {"node_modules", ".git", "__pycache__", ".venv", "venv", "dist", "build"}
 
 # Maximum number of nodes to run LLM analysis on
-_MAX_LLM_NODES = 10
+_MAX_LLM_NODES = 50
 
 # Maximum concurrent LLM calls
 _LLM_CONCURRENCY = 5
@@ -66,8 +66,8 @@ class CodeAuditorAgent(BaseAgent):
 
     @property
     def timeout_seconds(self) -> float:
-        """Code auditor timeout: 180 seconds (audits multiple components via LLM)."""
-        return 180.0
+        """Code auditor timeout: 300 seconds (audits ALL components via LLM)."""
+        return 300.0
 
     @property
     def retry_policy(self) -> RetryPolicy:
@@ -92,7 +92,7 @@ class CodeAuditorAgent(BaseAgent):
             Success result with node_inspections dict, or failure result with error.
         """
         try:
-            await self.emit_progress("Reading source files...")
+            await self.emit_progress("Leyendo archivos fuente...")
 
             # Read all source files from the repository
             source_files = await asyncio.to_thread(
@@ -100,10 +100,10 @@ class CodeAuditorAgent(BaseAgent):
             )
 
             await self.emit_progress(
-                f"Found {len(source_files)} source files to analyze"
+                f"Se encontraron {len(source_files)} archivos para analizar"
             )
 
-            await self.emit_progress("Extracting method implementations...")
+            await self.emit_progress("Extrayendo implementaciones de métodos...")
 
             # Use WorkPartitioner for large repositories
             if self._partitioner.should_partition(len(source_files)):
@@ -117,7 +117,7 @@ class CodeAuditorAgent(BaseAgent):
                 )
 
             await self.emit_progress(
-                f"Extracted methods from {len(all_method_sources)} components"
+                f"Métodos extraídos de {len(all_method_sources)} componentes"
             )
 
             # Build node_inspections with source code data
@@ -142,7 +142,7 @@ class CodeAuditorAgent(BaseAgent):
                     key=lambda x: len(x[1]),
                     reverse=True,
                 )
-                nodes_to_audit = sorted_components[:_MAX_LLM_NODES]
+                nodes_to_audit = sorted_components
 
                 semaphore = asyncio.Semaphore(_LLM_CONCURRENCY)
 
@@ -240,7 +240,7 @@ class CodeAuditorAgent(BaseAgent):
                 tasks = []
                 for component_id, methods in nodes_to_audit:
                     await self.emit_progress(
-                        f"Auditing code quality for {component_id}..."
+                        f"Auditando calidad de {component_id}..."
                     )
                     tasks.append(audit_component(component_id, methods))
 
@@ -301,7 +301,7 @@ class CodeAuditorAgent(BaseAgent):
         batches = self._partitioner.create_batches(file_list)
 
         await self.emit_progress(
-            f"Partitioning {len(file_list)} files into {len(batches)} batches"
+            f"Particionando {len(file_list)} archivos en {len(batches)} lotes"
         )
 
         async def process_batch(batch_files: list[str]) -> dict[str, dict[str, str]]:

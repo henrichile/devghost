@@ -9,7 +9,7 @@ interface DocumentationPanelProps {
   artifactsLoading: boolean;
 }
 
-type ArtifactTab = 'c4' | 'dictionary' | 'adr' | 'rbac' | 'testing' | 'usecases';
+type ArtifactTab = 'c4' | 'dictionary' | 'adr' | 'rbac' | 'testing' | 'usecases' | 'uml';
 
 const FALLBACK_C4 = `flowchart TD
     A[Cliente] --> B[Controlador]
@@ -21,6 +21,7 @@ const FALLBACK_ADR = `No se pudo generar el ADR. Intenta analizar nuevamente.`;
 const FALLBACK_RBAC = `No se pudo generar la matriz RBAC. Intenta analizar nuevamente.`;
 const FALLBACK_TESTING = `No se pudo generar el plan de testing. Intenta analizar nuevamente.`;
 const FALLBACK_USECASES = `No se pudo generar los casos de uso. Intenta analizar nuevamente.`;
+const FALLBACK_UML = `No se pudo generar el análisis UML. Intenta analizar nuevamente.`;
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -67,7 +68,8 @@ export function DocumentationPanel({ artifacts, artifactsLoading }: Documentatio
     { id: 'adr', label: 'ADR-001', icon: '📝' },
     { id: 'rbac', label: 'RBAC', icon: '🔐' },
     { id: 'testing', label: 'Testing', icon: '🧪' },
-    { id: 'usecases', label: 'Casos de Uso', icon: '👤' },
+    { id: 'usecases', label: 'Casos de Uso', icon: '📋' },
+    { id: 'uml', label: 'Análisis UML', icon: '📐' },
   ];
 
   const getContent = (tab: ArtifactTab): string => {
@@ -76,7 +78,8 @@ export function DocumentationPanel({ artifacts, artifactsLoading }: Documentatio
       if (tab === 'dictionary') return artifacts.dbDictionary || FALLBACK_DICTIONARY;
       if (tab === 'adr') return artifacts.adrDocument || FALLBACK_ADR;
       if (tab === 'rbac') return artifacts.rbacMatrix || FALLBACK_RBAC;
-      if (tab === 'usecases') return artifacts.useCases || FALLBACK_USECASES;
+      if (tab === 'usecases') return artifacts.useCasesDoc || FALLBACK_USECASES;
+      if (tab === 'uml') return artifacts.useCases || FALLBACK_UML;
       return artifacts.testPlan || FALLBACK_TESTING;
     }
     if (tab === 'c4') return FALLBACK_C4;
@@ -84,6 +87,7 @@ export function DocumentationPanel({ artifacts, artifactsLoading }: Documentatio
     if (tab === 'adr') return FALLBACK_ADR;
     if (tab === 'rbac') return FALLBACK_RBAC;
     if (tab === 'usecases') return FALLBACK_USECASES;
+    if (tab === 'uml') return FALLBACK_UML;
     return FALLBACK_TESTING;
   };
 

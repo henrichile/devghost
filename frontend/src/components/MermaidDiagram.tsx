@@ -29,7 +29,6 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
     // Sanitize mermaid code: fix common LLM syntax errors
     let sanitized = code;
     // Remove ALL parentheses inside square bracket labels [...]
-    // This is the #1 cause of Mermaid parse errors from LLM output
     sanitized = sanitized.replace(/\[([^\]]*)\]/g, (_match, content) => {
       return '[' + content.replace(/[()]/g, '') + ']';
     });
@@ -37,8 +36,25 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
     sanitized = sanitized.replace(/\{([^}]*)\}/g, (_match, content) => {
       return '{' + content.replace(/[()]/g, '') + '}';
     });
-    // Fix quotes
-    sanitized = sanitized.replace(/"/g, "'");
+    // Remove apostrophes/single quotes that break class diagrams
+    sanitized = sanitized.replace(/'/g, '');
+    // Remove double quotes
+    sanitized = sanitized.replace(/"/g, '');
+    // Remove backticks that aren't part of code blocks
+    sanitized = sanitized.replace(/`/g, '');
+    // Remove semicolons at end of lines (invalid in some diagram types)
+    sanitized = sanitized.replace(/;\s*$/gm, '');
+    // Remove colons followed by text in class members (breaks parser)
+    // e.g., "  Orquesta operaciones de..." → keep as-is, but remove problematic punctuation
+    sanitized = sanitized.replace(/[áéíóúñÁÉÍÓÚÑ¿¡]/g, (ch) => {
+      // Keep Spanish chars but replace them with ASCII equivalents in diagram context
+      const map: Record<string, string> = {
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+        'ñ': 'n', 'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O',
+        'Ú': 'U', 'Ñ': 'N', '¿': '', '¡': ''
+      };
+      return map[ch] || ch;
+    });
 
     const renderDiagram = async () => {
       try {

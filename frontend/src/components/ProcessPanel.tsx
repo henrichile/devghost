@@ -9,11 +9,27 @@ export interface ProcessPanelProps {
 }
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
-  ast_analyzer: 'Analizando AST y Code Flow',
-  er_extractor: 'Extrayendo modelo ER',
-  code_auditor: 'Auditando código',
-  doc_generator: 'Generando documentación',
-  system_reporter: 'Detectando stack tecnológico',
+  ast_analyzer: 'Análisis de Arquitectura',
+  er_extractor: 'Modelo de Datos',
+  code_auditor: 'Auditoría de Código',
+  doc_generator: 'Documentación Técnica',
+  system_reporter: 'Stack Tecnológico',
+};
+
+const AGENT_DESCRIPTIONS: Record<string, string> = {
+  ast_analyzer: 'Escaneando archivos, clasificando componentes y mapeando dependencias entre módulos',
+  er_extractor: 'Detectando entidades, atributos, claves primarias y relaciones del modelo de datos',
+  code_auditor: 'Extrayendo código fuente, generando descripciones y evaluando calidad con IA',
+  doc_generator: 'Generando C4, ADR, RBAC, plan de testing y casos de uso UML',
+  system_reporter: 'Identificando lenguajes, frameworks, bases de datos e infraestructura',
+};
+
+const AGENT_ICONS: Record<string, string> = {
+  ast_analyzer: '🏗️',
+  er_extractor: '🗄️',
+  code_auditor: '🔍',
+  doc_generator: '📄',
+  system_reporter: '⚙️',
 };
 
 function buildEntries(events: AgentEvent[], startTime: number): AgentPanelEntry[] {
@@ -65,7 +81,19 @@ export function ProcessPanel({ events, startTime }: ProcessPanelProps) {
 
   const entries = useMemo(() => buildEntries(events, startTime), [events, startTime]);
 
-  const completedCount = entries.filter(e => e.status === 'complete').length;
+  // Always show all 5 agents — merge real entries with pending placeholders
+  const ALL_AGENT_IDS = ['ast_analyzer', 'er_extractor', 'code_auditor', 'doc_generator', 'system_reporter'];
+  const allEntries = useMemo(() => {
+    const entryMap = new Map(entries.map(e => [e.agent, e]));
+    return ALL_AGENT_IDS.map(id => entryMap.get(id) || {
+      agent: id,
+      status: 'pending' as const,
+      messages: [],
+      startedAt: 0,
+    });
+  }, [entries]);
+
+  const completedCount = allEntries.filter(e => e.status === 'complete').length;
   const totalAgents = 5;
   const progress = Math.min(95, (completedCount / totalAgents) * 100);
 
@@ -84,33 +112,46 @@ export function ProcessPanel({ events, startTime }: ProcessPanelProps) {
 
   return (
     <div className="fixed inset-0 bg-[#060911] z-50 flex flex-col items-center justify-center px-4">
-      {/* Background glows */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-600/8 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/3 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-cyan-500/6 rounded-full blur-[100px] pointer-events-none" />
+      {/* Background animated glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] bg-cyan-500/8 rounded-full blur-[120px] pointer-events-none animate-[pulse_3s_ease-in-out_infinite]" />
+      <div className="absolute top-1/2 right-1/4 w-[300px] h-[300px] bg-blue-500/6 rounded-full blur-[100px] pointer-events-none animate-[pulse_4s_ease-in-out_infinite_0.5s]" />
 
-      <div className="relative z-10 max-w-md w-full space-y-6 text-center">
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #38bdf8 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+
+      <div className="relative z-10 max-w-lg w-full space-y-8 text-center">
         {/* Ghost animation */}
-        <div className="flex justify-center">
+        <div className="flex justify-center mb-2">
           <GhostLoader />
         </div>
 
-        {/* Title */}
-        <h2 className="text-xl font-bold text-slate-100">Analizando repositorio</h2>
-        <p className="text-[13px] text-slate-500 leading-relaxed">
-          Agentes autónomos procesando en paralelo. Progreso en tiempo real.
-        </p>
+        {/* Title with gradient */}
+        <div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+            Analizando repositorio
+          </h2>
+          <p className="text-[13px] text-slate-500 leading-relaxed mt-2">
+            Agentes autónomos procesando en paralelo. Progreso en tiempo real.
+          </p>
+        </div>
 
-        {/* Progress bar */}
-        <div className="w-full">
-          <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/30">
+        {/* Progress bar with glow */}
+        <div className="w-full px-2">
+          <div className="h-2.5 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700/40 shadow-inner">
             <div
-              className="h-full bg-gradient-to-r from-purple-500 via-cyan-400 to-blue-500 rounded-full transition-all duration-700 ease-out"
+              className="h-full bg-gradient-to-r from-purple-500 via-cyan-400 to-blue-500 rounded-full transition-all duration-700 ease-out relative"
               style={{ width: `${progress}%` }}
-            />
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite] rounded-full" />
+            </div>
           </div>
-          <div className="flex justify-between mt-2 text-xs text-slate-500">
-            <span>{completedCount}/{totalAgents} agentes</span>
-            <span>{formatElapsedTime(Date.now() - startTime).replace('+', '')} transcurridos</span>
+          <div className="flex justify-between mt-3 text-[12px] text-slate-400 font-medium">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              {completedCount}/{totalAgents} agentes
+            </span>
+            <span className="font-mono text-slate-500">{formatElapsedTime(Date.now() - startTime).replace('+', '')} transcurridos</span>
           </div>
         </div>
 
@@ -118,73 +159,86 @@ export function ProcessPanel({ events, startTime }: ProcessPanelProps) {
         <div
           ref={logRef}
           onScroll={handleScroll}
-          className="space-y-2.5 text-left max-h-[280px] overflow-y-auto pr-1"
+          className="space-y-3 text-left max-h-[450px] overflow-y-auto pr-1 px-1"
         >
-          {entries.length === 0 ? (
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border bg-slate-800/60 border-cyan-500/30 text-cyan-300">
-              <div className="shrink-0 w-5 h-5 flex items-center justify-center">
-                <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-              </div>
-              <span className="text-sm font-medium">Inicializando agentes...</span>
-            </div>
-          ) : (
-            entries.map((entry) => {
+          {allEntries.map((entry, idx) => {
               const isActive = entry.status === 'running';
               const isDone = entry.status === 'complete';
               const isError = entry.status === 'error';
+              const isPending = entry.status === 'pending';
               const displayName = AGENT_DISPLAY_NAMES[entry.agent] || entry.agent;
+              const description = AGENT_DESCRIPTIONS[entry.agent] || '';
+              const icon = AGENT_ICONS[entry.agent] || '⚡';
               const latestMessage = entry.messages[entry.messages.length - 1] || '';
+              const statusText = isActive
+                ? (latestMessage || description)
+                : isPending
+                ? 'En espera'
+                : '';
 
               return (
                 <div
                   key={entry.agent}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all duration-500 ${
+                  className={`flex items-center gap-3 px-5 py-3.5 rounded-xl border transition-all duration-500 ${
                     isActive
-                      ? 'bg-slate-800/60 border-cyan-500/30 text-cyan-300'
+                      ? 'bg-gradient-to-r from-cyan-950/40 to-slate-800/60 border-cyan-500/30 text-cyan-200 shadow-lg shadow-cyan-500/5'
                       : isDone
-                      ? 'bg-slate-900/30 border-slate-800/20 text-slate-400'
+                      ? 'bg-slate-900/30 border-emerald-500/10 text-slate-300'
                       : isError
-                      ? 'bg-red-900/10 border-red-500/20 text-red-300'
-                      : 'bg-slate-900/20 border-slate-800/10 text-slate-600'
+                      ? 'bg-red-950/20 border-red-500/20 text-red-300'
+                      : 'bg-slate-900/20 border-slate-700/20 text-slate-500'
                   }`}
+                  style={{ animationDelay: `${idx * 100}ms` }}
                 >
                   <div className="shrink-0">
                     {isDone ? (
-                      <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-sm">
+                        ✅
+                      </div>
                     ) : isError ? (
-                      <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-sm">
+                        ❌
+                      </div>
                     ) : isActive ? (
-                      <div className="w-5 h-5 flex items-center justify-center">
-                        <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                      <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-sm relative">
+                        <span>{icon}</span>
+                        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
                       </div>
                     ) : (
-                      <div className="w-5 h-5 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-slate-700" />
+                      <div className="w-8 h-8 rounded-lg bg-slate-800/50 border border-slate-700/30 flex items-center justify-center text-sm opacity-50">
+                        {icon}
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium block">{displayName}</span>
-                    {isActive && latestMessage && (
-                      <span className="text-xs text-slate-500 block truncate">{truncateMessage(latestMessage)}</span>
+                    <span className={`text-[13px] font-bold block ${isDone ? 'text-slate-300' : isPending ? 'text-slate-500' : ''}`}>{displayName}</span>
+                    {isActive && statusText && (
+                      <span className="text-[11px] text-slate-400 block truncate mt-0.5">{truncateMessage(statusText)}</span>
+                    )}
+                    {isDone && (
+                      <span className="text-[10px] text-emerald-500/70 block mt-0.5">Análisis finalizado</span>
+                    )}
+                    {isPending && (
+                      <span className="text-[10px] text-slate-600 block mt-0.5">Esperando turno...</span>
                     )}
                     {isError && entry.error && (
-                      <span className="text-xs text-red-400/80 block truncate">{truncateMessage(entry.error)}</span>
+                      <span className="text-[11px] text-red-400/80 block truncate mt-0.5">{truncateMessage(entry.error)}</span>
                     )}
                   </div>
-                  <div className="shrink-0 text-xs text-slate-600 font-mono">
+                  <div className="shrink-0 text-[12px] font-mono">
                     {isDone && entry.durationMs != null && (
-                      <span className="text-emerald-400">{formatDuration(entry.durationMs)}</span>
+                      <span className="text-emerald-400 font-bold">{formatDuration(entry.durationMs)}</span>
+                    )}
+                    {isActive && (
+                      <span className="text-cyan-500/60 text-[10px] animate-pulse">en curso</span>
+                    )}
+                    {isPending && (
+                      <span className="text-slate-700 text-[10px]">—</span>
                     )}
                   </div>
                 </div>
               );
-            })
-          )}
+            })}
         </div>
       </div>
     </div>

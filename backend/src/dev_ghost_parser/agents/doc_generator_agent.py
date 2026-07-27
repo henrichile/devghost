@@ -96,7 +96,7 @@ class DocGeneratorAgent(BaseAgent):
             Success result with artifacts dict, or failure result with error message.
         """
         try:
-            await self.emit_progress("Initializing documentation generator...")
+            await self.emit_progress("Inicializando generador de documentación...")
 
             generator = Artifacts_Generator(llm_client=context.llm_client)
 
@@ -117,7 +117,7 @@ class DocGeneratorAgent(BaseAgent):
             artifacts: dict[str, Any] = {}
 
             # Generate C4 architecture diagram
-            await self.emit_progress("Generating C4 architecture diagram...")
+            await self.emit_progress("Generando diagrama C4...")
             try:
                 c4_result = await asyncio.to_thread(
                     generator.generate_c4_diagram, code_flow_data, er_data
@@ -128,18 +128,30 @@ class DocGeneratorAgent(BaseAgent):
                 artifacts["c4_diagram"] = None
 
             # Generate database dictionary
-            await self.emit_progress("Generating database dictionary...")
+            await self.emit_progress("Generando diccionario de base de datos...")
             try:
                 db_dict_result = await asyncio.to_thread(
                     generator.generate_db_dictionary, er_data
                 )
+                # If no ER entities found, generate a basic data model doc from code flow
+                if db_dict_result is None and code_flow_data and hasattr(code_flow_data, 'nodes'):
+                    repo_nodes = [n for n in code_flow_data.nodes if hasattr(n, 'type') and n.type == 'Repository']
+                    if repo_nodes and context.llm_client.available:
+                        repo_names = ', '.join(n.label for n in repo_nodes[:10])
+                        db_dict_result = await asyncio.to_thread(
+                            context.llm_client.complete,
+                            "Genera un diccionario de datos en Markdown basado en los repositorios detectados. "
+                            "Para cada repositorio, infiere las entidades y atributos probables. "
+                            "Usa tablas HTML (<table>). Responde en español.",
+                            f"Repositorios detectados: {repo_names}"
+                        )
                 artifacts["db_dictionary"] = db_dict_result
             except Exception as e:
                 logger.warning("DB dictionary generation failed: %s", e)
                 artifacts["db_dictionary"] = None
 
             # Generate architecture decision record
-            await self.emit_progress("Generating architecture decision record...")
+            await self.emit_progress("Generando registro de decisión arquitectónica...")
             try:
                 adr_result = await asyncio.to_thread(
                     generator.generate_adr, code_flow_data, er_data
@@ -150,7 +162,7 @@ class DocGeneratorAgent(BaseAgent):
                 artifacts["adr"] = None
 
             # Generate RBAC matrix
-            await self.emit_progress("Generating RBAC security matrix...")
+            await self.emit_progress("Generando matriz de seguridad RBAC...")
             try:
                 rbac_result = await asyncio.to_thread(
                     generator.generate_rbac_matrix, code_flow_data
@@ -161,7 +173,7 @@ class DocGeneratorAgent(BaseAgent):
                 artifacts["rbac_matrix"] = None
 
             # Generate test plan — use WorkPartitioner for large repos
-            await self.emit_progress("Generating test plan...")
+            await self.emit_progress("Generando plan de testing...")
             try:
                 test_plan_result = await self._generate_test_plan_partitioned(
                     generator, code_flow_data, context.repo_path
@@ -170,6 +182,28 @@ class DocGeneratorAgent(BaseAgent):
             except Exception as e:
                 logger.warning("Test plan generation failed: %s", e)
                 artifacts["test_plan"] = None
+
+            # Generate use cases from Controller/Route methods (UML analysis)
+            await self.emit_progress("Generando análisis UML...")
+            try:
+                use_cases_result = await asyncio.to_thread(
+                    generator.generate_use_cases, code_flow_data
+                )
+                artifacts["use_cases"] = use_cases_result
+            except Exception as e:
+                logger.warning("Use cases generation failed: %s", e)
+                artifacts["use_cases"] = None
+
+            # Generate formal Use Cases & User Stories document (ISO/IEEE standard)
+            await self.emit_progress("Generando casos de uso e historias de usuario...")
+            try:
+                use_cases_doc = await self._generate_formal_use_cases(
+                    code_flow_data, context
+                )
+                artifacts["use_cases_doc"] = use_cases_doc
+            except Exception as e:
+                logger.warning("Formal use cases document generation failed: %s", e)
+                artifacts["use_cases_doc"] = None
 
             return AgentResult(
                 agent_name="doc_generator",
@@ -184,6 +218,145 @@ class DocGeneratorAgent(BaseAgent):
                 success=False,
                 error_message=str(e),
             )
+
+    async def _generate_formal_use_cases(
+        self, code_flow_data: Any, context: AgentContext
+    ) -> str | None:
+        """Generate formal Use Cases and User Stories in ISO/IEC/IEEE 29148 format.
+
+        Produces a standards-compliant document with:
+        - User Stories in Connextra format with acceptance criteria
+        - Use Cases per ISO/IEC/IEEE 29148 (formerly IEEE 830)
+        """
+        if not context.llm_client.available:
+            return None
+        if not code_flow_data or not hasattr(code_flow_data, 'nodes'):
+            return None
+
+        # Extract controllers/routes with their methods
+        controllers = [n for n in code_flow_data.nodes
+                      if hasattr(n, 'type') and n.type in ("Controller", "Route")]
+        if not controllers:
+            return None
+
+        ctrl_info = []
+        for ctrl in controllers[:15]:
+            methods = getattr(ctrl, 'method_names', []) or []
+            # Sanitize: only keep valid-looking method names (short, no spaces/special chars)
+            safe_methods = [
+                m[:40] for m in methods[:10]
+                if len(m) <= 60 and '\n' not in m and not any(c in m for c in '{}[]<>()\"\'')
+            ]
+            if safe_methods:
+                ctrl_info.append(f"- {ctrl.label}: métodos [{', '.join(safe_methods)}]")
+            else:
+                ctrl_info.append(f"- {ctrl.label}")
+
+        system_prompt = (
+            "Eres un analista de requerimientos senior. "
+            "Genera un documento de Casos de Uso e Historias de Usuario profesional.\n\n"
+            "REGLAS ABSOLUTAS:\n"
+            "- Para TODAS las tablas usa HTML: <table><thead>...</thead><tbody>...</tbody></table>\n"
+            "- NUNCA uses tablas Markdown con | pipes |. SIEMPRE HTML.\n"
+            "- Responde en español\n"
+            "- NO listes endpoints HTTP (GET, POST, PUT). Genera CASOS DE USO de negocio.\n"
+            "- NO generes listas de métodos técnicos. Piensa como USUARIO FINAL.\n"
+            "- NO incluyas texto introductorio. Comienza DIRECTAMENTE con el heading.\n"
+            "- NO escribas frases como 'Claro, aqui tienes...' o 'A continuacion...'\n"
+            "- La respuesta SIEMPRE debe comenzar con: # Casos de Uso e Historias de Usuario\n"
+            "- SIEMPRE genera el MISMO formato. No variar la estructura entre consultas.\n\n"
+            "ESTRUCTURA FIJA (seguir EXACTAMENTE):\n\n"
+            "# Casos de Uso e Historias de Usuario\n\n"
+            "## 1. Historias de Usuario\n\n"
+            "Genera 5-10 historias. Para CADA una:\n\n"
+            "### HU-001: [Título descriptivo]\n\n"
+            "<table>\n"
+            "<tbody>\n"
+            "<tr><td><strong>Como</strong></td><td>[rol]</td></tr>\n"
+            "<tr><td><strong>Quiero</strong></td><td>[acción]</td></tr>\n"
+            "<tr><td><strong>Para</strong></td><td>[beneficio]</td></tr>\n"
+            "<tr><td><strong>Prioridad</strong></td><td>Alta / Media / Baja</td></tr>\n"
+            "<tr><td><strong>Criterios de Aceptación</strong></td>"
+            "<td>1. Dado [contexto], cuando [acción], entonces [resultado]<br/>"
+            "2. Dado [contexto], cuando [acción], entonces [resultado]</td></tr>\n"
+            "</tbody>\n"
+            "</table>\n\n"
+            "---\n\n"
+            "## 2. Casos de Uso\n\n"
+            "Genera 3-6 casos de uso. Para CADA uno:\n\n"
+            "### CU-001: [Nombre]\n\n"
+            "<table>\n"
+            "<tbody>\n"
+            "<tr><td><strong>Actor</strong></td><td>[rol]</td></tr>\n"
+            "<tr><td><strong>Descripción</strong></td><td>[qué logra]</td></tr>\n"
+            "<tr><td><strong>Precondiciones</strong></td><td>1. [cond]<br/>2. [cond]</td></tr>\n"
+            "<tr><td><strong>Postcondiciones</strong></td><td>1. [resultado]</td></tr>\n"
+            "<tr><td><strong>HU Relacionadas</strong></td><td>HU-001, HU-002</td></tr>\n"
+            "</tbody>\n"
+            "</table>\n\n"
+            "**Flujo Principal:**\n\n"
+            "<table>\n"
+            "<thead><tr><th>Paso</th><th>Actor</th><th>Sistema</th></tr></thead>\n"
+            "<tbody>\n"
+            "<tr><td>1</td><td>[acción del usuario]</td><td>-</td></tr>\n"
+            "<tr><td>2</td><td>-</td><td>[respuesta del sistema]</td></tr>\n"
+            "<tr><td>3</td><td>[usuario confirma]</td><td>-</td></tr>\n"
+            "<tr><td>4</td><td>-</td><td>[sistema guarda]</td></tr>\n"
+            "</tbody>\n"
+            "</table>\n\n"
+            "**Flujos Alternativos:**\n"
+            "- **FA1:** En paso 2, si [condición], entonces [acción alternativa].\n\n"
+            "---\n\n"
+            "## 3. Matriz de Trazabilidad\n\n"
+            "<table>\n"
+            "<thead><tr><th>Caso de Uso</th><th>Historias</th><th>Actor</th><th>Prioridad</th></tr></thead>\n"
+            "<tbody>\n"
+            "<tr><td>CU-001</td><td>HU-001, HU-002</td><td>[actor]</td><td>Alta</td></tr>\n"
+            "</tbody>\n"
+            "</table>\n"
+        )
+
+        user_prompt = (
+            "A partir de los siguientes módulos funcionales del sistema, "
+            "genera historias de usuario y casos de uso DESDE LA PERSPECTIVA DEL USUARIO FINAL. "
+            "NO listes endpoints ni métodos técnicos. Piensa en QUÉ PUEDE HACER el usuario:\n\n"
+            "Módulos del sistema:\n"
+            + "\n".join(ctrl_info)
+            + "\n\nRecuerda: genera TODO con tablas HTML, no Markdown. "
+            "Comienza directamente con '# Casos de Uso e Historias de Usuario'"
+        )
+
+        result = await asyncio.to_thread(
+            context.llm_client.complete, system_prompt, user_prompt
+        )
+        if not result or not result.strip():
+            return None
+        # Strip any introductory text the LLM adds before the actual content
+        cleaned = result.strip()
+        # Remove common LLM preambles
+        for prefix in [
+            "Claro,", "Aquí tienes", "A continuación", "Por supuesto",
+            "Entendido", "Perfecto", "De acuerdo", "Aqui tienes",
+        ]:
+            if cleaned.lower().startswith(prefix.lower()):
+                # Find the first heading (#) or table and start from there
+                heading_idx = cleaned.find("\n#")
+                if heading_idx > 0:
+                    cleaned = cleaned[heading_idx + 1:]
+                break
+        # Validate: response must contain expected content patterns
+        # If it doesn't, the LLM hallucinated unrelated content — discard
+        has_use_case_content = (
+            "HU-" in cleaned or "CU-" in cleaned or
+            "<table" in cleaned.lower() or
+            "historia" in cleaned.lower() or
+            "caso de uso" in cleaned.lower() or
+            "precondicion" in cleaned.lower() or
+            "flujo" in cleaned.lower()
+        )
+        if not has_use_case_content:
+            return None
+        return cleaned
 
     async def _generate_test_plan_partitioned(
         self,

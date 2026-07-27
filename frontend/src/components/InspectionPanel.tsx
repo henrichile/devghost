@@ -90,6 +90,7 @@ export function InspectionPanel() {
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [activeTab, setActiveTab] = useState<InspectionTab>('methods');
   const [methodAnalysis, setMethodAnalysis] = useState<{ name: string; content: string | null; loading: boolean } | null>(null);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const handleMethodClick = async (method: string) => {
     if (!selectedNode) return;
@@ -118,7 +119,7 @@ export function InspectionPanel() {
 
   if (!inspectionOpen || !selectedNode) {
     return (
-      <aside className="w-[340px] shrink-0 border-l border-white/[0.04] bg-[#0A0E17] flex flex-col items-center justify-center h-full px-10 text-center">
+      <aside className="w-[420px] shrink-0 border-l border-white/[0.04] bg-[#0A0E17] flex flex-col items-center justify-center h-full px-10 text-center">
         <div className="space-y-4">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/[0.04] flex items-center justify-center">
             <svg className="w-7 h-7 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -146,8 +147,13 @@ export function InspectionPanel() {
   const nodeStyle = getNodeStyle(selectedNode.type);
   const methodCount = selectedNode.methods?.length || 0;
 
+  // Description handling
+  const fullDescription = selectedNode.description || '';
+  const isLongDescription = fullDescription.length > 120;
+  const previewDescription = isLongDescription ? fullDescription.slice(0, 120) + '...' : fullDescription;
+
   return (
-    <aside className="w-[340px] shrink-0 border-l border-white/[0.04] bg-[#0A0E17] flex flex-col h-full">
+    <aside className="w-[420px] shrink-0 border-l border-white/[0.04] bg-[#0A0E17] flex flex-col h-full">
       {/* Header */}
       <div className="px-5 py-4 border-b border-white/[0.04] bg-[#0F1420]/50">
         <div className="flex items-center justify-between mb-2">
@@ -159,8 +165,34 @@ export function InspectionPanel() {
             {selectedNode.type}
           </span>
         </div>
-        {selectedNode.description && (
-          <p className="text-[10px] text-slate-500 leading-relaxed">{selectedNode.description}</p>
+        {fullDescription && (
+          <div>
+            {descriptionExpanded ? (
+              <div className="max-h-[250px] overflow-y-auto pr-1 rounded-lg bg-[#0A0E17] border border-white/[0.06] p-3 mt-2">
+                <div className="text-[12px] text-slate-300 leading-relaxed [&_p]:mb-2 [&_strong]:text-white [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_li]:text-slate-300 [&_h1]:text-white [&_h1]:text-sm [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-white [&_h2]:text-xs [&_h2]:font-bold [&_h2]:mb-1 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_code]:text-cyan-300 whitespace-pre-wrap break-words">
+                  {fullDescription}
+                </div>
+                <button
+                  onClick={() => setDescriptionExpanded(false)}
+                  className="mt-2 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+                >
+                  ▲ Colapsar
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-[12px] text-slate-400 leading-relaxed">{previewDescription}</p>
+                {isLongDescription && (
+                  <button
+                    onClick={() => setDescriptionExpanded(true)}
+                    className="mt-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+                  >
+                    ▼ Ver más información
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

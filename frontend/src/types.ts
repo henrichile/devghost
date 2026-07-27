@@ -69,4 +69,5 @@ export interface ArtifactsResponse {
   rbacMatrix: string | null;
   testPlan: string | null;
   useCases: string | null;
+  useCasesDoc: string | null;
 }
