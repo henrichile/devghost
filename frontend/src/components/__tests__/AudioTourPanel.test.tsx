@@ -43,7 +43,7 @@ describe('AudioTourPanel', () => {
   it('renders "Play" button initially', () => {
     render(<AudioTourPanel summary="Test summary" />);
 
-    expect(screen.getByRole('button', { name: /play/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /reproducir/i })).toBeInTheDocument();
   });
 
   it('shows summary text', () => {
@@ -56,9 +56,9 @@ describe('AudioTourPanel', () => {
     const user = userEvent.setup();
     render(<AudioTourPanel summary="Test summary" />);
 
-    await user.click(screen.getByRole('button', { name: /play/i }));
+    await user.click(screen.getByRole('button', { name: /reproducir/i }));
 
-    expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /detener/i })).toBeInTheDocument();
   });
 
   it('clicking Stop restores "Play" button', async () => {
@@ -66,11 +66,11 @@ describe('AudioTourPanel', () => {
     render(<AudioTourPanel summary="Test summary" />);
 
     // Click Play first
-    await user.click(screen.getByRole('button', { name: /play/i }));
-    expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /reproducir/i }));
+    expect(screen.getByRole('button', { name: /detener/i })).toBeInTheDocument();
 
     // Click Stop
-    await user.click(screen.getByRole('button', { name: /stop/i }));
-    expect(screen.getByRole('button', { name: /play/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /detener/i }));
+    expect(screen.getByRole('button', { name: /reproducir/i })).toBeInTheDocument();
   });
 });

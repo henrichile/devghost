@@ -286,7 +286,7 @@ class TestFullFlowEmptyCodebase:
 
             assert (
                 result["summary"]
-                == "No analyzable source files were found in the provided codebase."
+                == "No se encontraron archivos de codigo fuente analizables en la base de codigo proporcionada."
             )
 
     def test_empty_codebase_no_errors(self) -> None:

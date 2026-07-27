@@ -27,12 +27,19 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import importlib
+import logging
 import os
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING as _TYPE_CHECKING
 
 from tree_sitter import Language, Parser
 
-from .models import AnalysisError, AnalysisFatalError, CodeFlowResult, Edge, Node, NodeType
+from .models import AnalysisError, AnalysisFatalError, CodeFlowResult, Edge, FileContext, Node, NodeType
+from .description_generator import Description_Generator
+
+if _TYPE_CHECKING:
+    from .llm_client import LLM_Client
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Supported file extensions and their tree-sitter grammar configurations
@@ -112,9 +119,18 @@ _CLASSIFICATION_RULES: list[tuple[list[str], NodeType]] = [
     (["*Controller*", "*_controller*"],                "Controller"),
     (["*Endpoint*", "*_endpoint*", "*Resource*"],      "Controller"),
     (["*Service*",    "*_service*", "*Manager*", "*Handler*", "*Provider*"], "Service"),
-    (["*Route*",      "router*", "routes*", "*_route*", "*_routes*", "*Config*", "*Configuration*"], "Route"),
+    (["*Route*",      "router*", "routes*", "*_route*", "*_routes*"], "Route"),
     (["*Middleware*", "*_middleware*", "*Filter*", "*Interceptor*", "*Guard*"], "Middleware"),
     (["*Repository*", "*Repo*", "*_repository*", "*_repo*", "*Dao*", "*DAO*", "*Mapper*", "*Store*"], "Repository"),
+]
+
+_CONFIG_PATTERNS: list[str] = [
+    "config", "configuration", "connection",
+    "database", "appconfig", "dbconfig", "settings",
+]
+
+_INIT_PATTERNS: list[str] = [
+    "init", "bootstrap", "setup", "startup",
 ]
 
 
@@ -131,10 +147,58 @@ def _classify(name: str) -> NodeType:
     return "Utility"
 
 
+def _matches_config(name: str) -> bool:
+    """Return True if *name* matches any Config pattern (case-insensitive substring)."""
+    name_lower = name.lower()
+    return any(pat in name_lower for pat in _CONFIG_PATTERNS)
+
+
+def _matches_init(name: str) -> bool:
+    """Return True if *name* matches any Init pattern (case-insensitive substring)."""
+    name_lower = name.lower()
+    return any(pat in name_lower for pat in _INIT_PATTERNS)
+
+
 def _classify_for_file(filename: str, class_name: Optional[str]) -> NodeType:
-    """Classify using *class_name* if present, otherwise use *filename* stem."""
+    """Classify using *class_name* if present, otherwise use *filename* stem.
+
+    Priority rules (evaluated in order):
+    1. Config/Init patterns are evaluated BEFORE Route patterns.
+    2. "Config" is prioritized over all types except "Controller".
+    3. Config + Init simultaneously → "Config" wins.
+    4. Config + Controller simultaneously → "Controller" wins.
+    5. Only Init (no Config match) → "Utility".
+    """
     stem = os.path.splitext(filename)[0]
-    # Class name takes priority (it's more semantically accurate).
+    # Use class_name if available, otherwise stem, for Config/Init checks.
+    primary_name = class_name if class_name else stem
+
+    # --- Step 1: Check Config and Init patterns (before Route) ---
+    is_config = _matches_config(primary_name) or _matches_config(stem)
+    is_init = _matches_init(primary_name) or _matches_init(stem)
+
+    if is_config:
+        # Config matched — check if Controller also matches (Controller wins over Config)
+        if class_name:
+            general_result = _classify(class_name)
+            if general_result == "Controller":
+                return "Controller"
+            # Also check stem for Controller
+            stem_result = _classify(stem)
+            if stem_result == "Controller":
+                return "Controller"
+        else:
+            stem_result = _classify(stem)
+            if stem_result == "Controller":
+                return "Controller"
+        # Config wins over everything else (including Init, Route, Service, etc.)
+        return "Config"
+
+    if is_init:
+        # Only Init matched (no Config) → assign "Utility"
+        return "Utility"
+
+    # --- Step 2: Fall through to general classification rules ---
     if class_name:
         result = _classify(class_name)
         if result != "Utility":
@@ -182,6 +246,99 @@ def _extract_class_name(source_bytes: bytes, ext: str) -> Optional[str]:
 
     tree = parser.parse(source_bytes)
     return _find_first_entity_name(tree.root_node, patterns)
+
+
+# ---------------------------------------------------------------------------
+# Tree-sitter: method/function name extraction (for FileContext)
+# ---------------------------------------------------------------------------
+
+# Mapping: language extension → list of (declaration_type, name_child_type)
+# for method/function definitions.
+_METHOD_NODE_PATTERNS: dict[str, list[tuple[str, str]]] = {
+    ".py":   [("function_definition", "identifier")],
+    ".js":   [("function_declaration", "identifier"),
+              ("method_definition", "property_identifier")],
+    ".ts":   [("function_declaration", "identifier"),
+              ("method_definition", "property_identifier")],
+    ".tsx":  [("function_declaration", "identifier"),
+              ("method_definition", "property_identifier")],
+    ".php":  [("method_declaration", "name")],
+    ".rb":   [("method", "identifier")],
+    ".go":   [("function_declaration", "identifier"),
+              ("method_declaration", "field_identifier")],
+    ".rs":   [("function_item", "identifier")],
+    ".java": [("method_declaration", "identifier")],
+    ".cs":   [("method_declaration", "identifier")],
+}
+
+
+def _find_all_method_names(node, patterns: list[tuple[str, str]]) -> list[str]:
+    """Depth-first search for all method/function declarations matching *patterns*.
+
+    Returns the text of identifier child nodes found.
+    """
+    results: list[str] = []
+    for decl_type, id_type in patterns:
+        if node.type == decl_type:
+            for child in node.children:
+                if child.type == id_type and child.text:
+                    name = child.text.decode("utf-8", errors="replace")
+                    results.append(name)
+                    break
+    for child in node.children:
+        results.extend(_find_all_method_names(child, patterns))
+    return results
+
+
+def _extract_method_names(source_bytes: bytes, ext: str) -> list[str]:
+    """Parse *source_bytes* with tree-sitter and return all method/function names found.
+
+    Returns an empty list if the extension is not supported or parsing fails.
+    """
+    parser = _PARSERS.get(ext)
+    if parser is None:
+        return []
+
+    patterns = _METHOD_NODE_PATTERNS.get(ext, [])
+    if not patterns:
+        return []
+
+    try:
+        tree = parser.parse(source_bytes)
+        return _find_all_method_names(tree.root_node, patterns)
+    except Exception:
+        return []
+
+
+def _filter_methods_by_visibility(methods: list[str], ext: str) -> list[str]:
+    """Filtra métodos según reglas de visibilidad del lenguaje.
+
+    - Python (.py): excluye dunder methods (nombres que comienzan con "__").
+    - Java/TypeScript/C# (.java, .ts, .tsx, .cs): excluye nombres que comienzan
+      con "_" (convención para métodos privados/protegidos, ya que solo extraemos
+      nombres del AST sin modificadores de acceso).
+    - Go/Rust/Ruby (.go, .rs, .rb): sin filtrado, retorna todos los métodos.
+
+    Satisfies Requirements 2.2, 2.5.
+    """
+    if ext == ".py":
+        return [m for m in methods if not m.startswith("__")]
+    elif ext in (".java", ".ts", ".tsx", ".cs"):
+        # Since we only extract method names from the AST (not modifiers),
+        # filter names starting with underscore as convention for private
+        return [m for m in methods if not m.startswith("_")]
+    else:  # .go, .rs, .rb, .js, .php — sin filtrado
+        return methods
+
+
+def _extract_import_names(source_bytes: bytes, ext: str) -> list[str]:
+    """Extract just the import path strings from source for FileContext.
+
+    This is a simplified version that returns only the import path strings
+    (not the relation type) for use in description generation.
+    """
+    raw_imports = _extract_imports(source_bytes, ext)
+    return [path for path, _relation in raw_imports]
 
 
 # ---------------------------------------------------------------------------
@@ -664,6 +821,9 @@ class Code_Flow_Analyzer:
     Satisfies Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6.
     """
 
+    def __init__(self, llm_client: LLM_Client | None = None) -> None:
+        self._description_generator = Description_Generator(llm_client=llm_client)
+
     def analyze(self, root_path: str) -> CodeFlowResult:
         """Analyze *root_path* and return a :class:`CodeFlowResult`.
 
@@ -767,7 +927,41 @@ class Code_Flow_Analyzer:
                 label = class_name if class_name else stem
                 node_type = _classify_for_file(filename, class_name)
 
-                nodes.append(Node(id=node_id, label=label, type=node_type))
+                node = Node(id=node_id, label=label, type=node_type)
+
+                # --- Generate description via Description_Generator -----------
+                try:
+                    file_context: FileContext | None = None
+                    if source_bytes is not None:
+                        # --- Method extraction pipeline (Requirements 2.1-2.5) ---
+                        try:
+                            raw_methods = _extract_method_names(source_bytes, ext)
+                            filtered_methods = _filter_methods_by_visibility(raw_methods, ext)
+                            method_names = filtered_methods
+                        except Exception as exc:
+                            logger.warning(
+                                "Non-fatal parsing error extracting methods from %s: %s",
+                                rel_path,
+                                exc,
+                            )
+                            method_names = []
+
+                        import_names = _extract_import_names(source_bytes, ext)
+                        file_context = FileContext(
+                            imports=import_names,
+                            class_name=class_name,
+                            method_names=method_names,
+                        )
+                        # Store method names on the Node for serialization (Task 2.1)
+                        node.method_names = method_names
+                    node.description = self._description_generator.generate(
+                        node, file_context
+                    )
+                except Exception:
+                    # Graceful fallback: use generic type-based description
+                    node.description = self._description_generator.generate(node, None)
+
+                nodes.append(node)
                 file_data.append((rel_path, ext, source_bytes))
 
         # --- Import extraction and edge generation (Task 4.3) -----------------

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -10,94 +10,58 @@ import {
   Handle,
   Position,
   BackgroundVariant,
-  MiniMap,
+  useReactFlow,
 } from '@xyflow/react';
 import Dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
 import type { CodeFlowNode, CodeFlowEdge, NodeType } from '../types';
+import { useGraphStore } from '../store/useGraphStore';
 
 interface CodeFlowGraphProps {
   data: { nodes: CodeFlowNode[]; edges: CodeFlowEdge[] } | null;
 }
 
-export function getNodeStyle(type: NodeType): { backgroundColor: string } {
+export function getNodeStyle(type: NodeType): { bg: string; border: string; glow: string; badge: string } {
   switch (type) {
     case 'Controller':
-      return { backgroundColor: '#1d4ed8' };
+      return { bg: '#0F1420', border: 'rgba(59, 130, 246, 0.25)', glow: 'rgba(59, 130, 246, 0.08)', badge: '#3B82F6' };
     case 'Service':
-      return { backgroundColor: '#047857' };
+      return { bg: '#0F1420', border: 'rgba(16, 185, 129, 0.25)', glow: 'rgba(16, 185, 129, 0.08)', badge: '#10B981' };
     case 'Route':
-      return { backgroundColor: '#6d28d9' };
+      return { bg: '#0F1420', border: 'rgba(139, 92, 246, 0.25)', glow: 'rgba(139, 92, 246, 0.08)', badge: '#8B5CF6' };
     case 'Middleware':
-      return { backgroundColor: '#b45309' };
+      return { bg: '#0F1420', border: 'rgba(245, 158, 11, 0.25)', glow: 'rgba(245, 158, 11, 0.08)', badge: '#F59E0B' };
     case 'Repository':
-      return { backgroundColor: '#0f766e' };
+      return { bg: '#0F1420', border: 'rgba(20, 184, 166, 0.25)', glow: 'rgba(20, 184, 166, 0.08)', badge: '#14B8A6' };
     case 'Utility':
-      return { backgroundColor: '#374151' };
+      return { bg: '#0F1420', border: 'rgba(245, 158, 11, 0.25)', glow: 'rgba(245, 158, 11, 0.08)', badge: '#F59E0B' };
+    case 'Config':
+      return { bg: '#0F1420', border: 'rgba(168, 85, 247, 0.25)', glow: 'rgba(168, 85, 247, 0.08)', badge: '#A855F7' };
   }
 }
 
 function getNodeTypeLabel(type: NodeType): string {
-  switch (type) {
-    case 'Controller':
-      return 'CONTROLLER';
-    case 'Service':
-      return 'SERVICE';
-    case 'Route':
-      return 'ROUTE';
-    case 'Middleware':
-      return 'MIDDLEWARE';
-    case 'Repository':
-      return 'REPOSITORY';
-    case 'Utility':
-      return 'UTILITY';
-  }
-}
-
-function getNodeIcon(type: NodeType): string {
-  switch (type) {
-    case 'Controller':
-      return '🎮';
-    case 'Service':
-      return '⚙️';
-    case 'Route':
-      return '🛤️';
-    case 'Middleware':
-      return '🔗';
-    case 'Repository':
-      return '🗄️';
-    case 'Utility':
-      return '🔧';
-  }
+  return type.toUpperCase();
 }
 
 function getNodeRank(type: NodeType): number {
   switch (type) {
-    case 'Controller':
-      return 0;
-    case 'Route':
-      return 1;
-    case 'Middleware':
-      return 2;
-    case 'Service':
-      return 3;
-    case 'Repository':
-      return 4;
-    case 'Utility':
-      return 5;
+    case 'Controller': return 0;
+    case 'Route': return 1;
+    case 'Middleware': return 2;
+    case 'Service': return 3;
+    case 'Repository': return 4;
+    case 'Utility': return 5;
+    case 'Config': return 6;
   }
 }
 
 function getEdgeColor(relation: string): string {
   switch (relation) {
-    case 'imports':
-      return '#64748b';
-    case 'calls':
-      return '#d97706';
-    case 'depends_on':
-      return '#7c3aed';
-    default:
-      return '#64748b';
+    case 'imports': return '#475569';
+    case 'calls': return '#F59E0B';
+    case 'depends_on': return '#8B5CF6';
+    default: return '#475569';
   }
 }
 
@@ -105,48 +69,96 @@ type CodeFlowNodeData = {
   label: string;
   nodeType: NodeType;
   typeLabel: string;
-  icon: string;
   bgColor: string;
-  connectionCount: number;
+  borderColor: string;
+  glowColor: string;
+  badgeColor: string;
+  description: string;
+  nodeId: string;
+  methods: string[];
+  methodCount: number;
 };
 
 function CustomNode({ data }: NodeProps<Node<CodeFlowNodeData>>) {
+  const highlightedNodeId = useGraphStore((s) => s.highlightedNodeId);
+  const selectedNode = useGraphStore((s) => s.selectedNode);
+  const isHighlighted = data.nodeId === highlightedNodeId;
+  const isSelected = data.nodeId === selectedNode?.id;
+
+  const handleClick = useCallback(() => {
+    const node: CodeFlowNode = {
+      id: data.nodeId,
+      label: data.label,
+      type: data.nodeType,
+      description: data.description,
+      methods: data.methods,
+    };
+    useGraphStore.getState().selectNode(node);
+  }, [data.nodeId, data.label, data.nodeType, data.description, data.methods]);
+
   return (
     <div
-      className="rounded-xl shadow-md min-w-[160px] max-w-[220px] transition-all duration-200 hover:shadow-xl hover:scale-[1.02] cursor-pointer"
+      onClick={handleClick}
+      className="relative rounded-lg min-w-[160px] max-w-[240px] transition-all duration-200 cursor-pointer"
       style={{
-        backgroundColor: data.bgColor,
-        border: '2px solid rgba(255,255,255,0.15)',
+        backgroundColor: '#0F1420',
+        border: isSelected
+          ? '1.5px solid rgba(6, 182, 212, 0.7)'
+          : isHighlighted
+          ? '1.5px solid rgba(99, 102, 241, 0.6)'
+          : `1px solid ${data.borderColor}`,
+        boxShadow: isHighlighted
+          ? `0 0 24px 6px rgba(99,102,241,0.2)`
+          : isSelected
+          ? `0 0 16px 4px rgba(6,182,212,0.15)`
+          : `0 2px 8px rgba(0,0,0,0.3)`,
       }}
     >
-      <Handle type="target" position={Position.Top} className="!bg-white/40 !w-2.5 !h-2.5 !border-white/60 !border" />
-      <div className="px-3.5 py-3">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[9px] text-white/60 font-bold uppercase tracking-widest">
-            {data.icon} {data.typeLabel}
-          </span>
-          {data.connectionCount > 0 && (
-            <span className="text-[8px] bg-white/15 text-white/70 px-1.5 py-0.5 rounded-full">
-              {data.connectionCount}→
-            </span>
-          )}
+      {/* SELECTED badge */}
+      {isSelected && (
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[7px] font-bold uppercase tracking-widest text-white bg-cyan-500 shadow-lg shadow-cyan-500/30 z-10">
+          SELECTED
         </div>
-        <div className="text-[12px] text-white font-bold leading-snug">
+      )}
+
+      <Handle type="target" position={Position.Top} className="!bg-slate-600 !w-1.5 !h-1.5 !border-0 !-top-[3px]" />
+
+      <div className="px-3.5 py-3">
+        {/* Type badge: colored dot + uppercase label */}
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: data.badgeColor }} />
+          <span
+            className="text-[9px] font-bold uppercase tracking-wider"
+            style={{ color: data.badgeColor }}
+          >
+            {data.typeLabel}
+          </span>
+        </div>
+
+        {/* Filename / Label */}
+        <div className="text-[13px] text-white font-semibold leading-snug">
           {data.label}
         </div>
+
+        {/* Sublabel (description as path) */}
+        {data.description && (
+          <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+            {data.description}
+          </div>
+        )}
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-white/40 !w-2.5 !h-2.5 !border-white/60 !border" />
+
+      <Handle type="source" position={Position.Bottom} className="!bg-slate-600 !w-1.5 !h-1.5 !border-0 !-bottom-[3px]" />
     </div>
   );
 }
 
 const nodeTypes = { codeflow: CustomNode };
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 65;
+const NODE_WIDTH = 200;
+const NODE_HEIGHT = 80;
 
 function layoutNodes(apiNodes: CodeFlowNode[], apiEdges: CodeFlowEdge[]) {
-  // Count connections per node
   const connCounts = new Map<string, number>();
   apiEdges.forEach((e) => {
     connCounts.set(e.source, (connCounts.get(e.source) || 0) + 1);
@@ -157,7 +169,7 @@ function layoutNodes(apiNodes: CodeFlowNode[], apiEdges: CodeFlowEdge[]) {
 
   if (useDagre) {
     const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-    g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 120, edgesep: 30 });
+    g.setGraph({ rankdir: 'TB', nodesep: 180, ranksep: 220, edgesep: 80 });
 
     apiNodes.forEach((node) => {
       g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
@@ -179,15 +191,19 @@ function layoutNodes(apiNodes: CodeFlowNode[], apiEdges: CodeFlowEdge[]) {
           label: node.label,
           nodeType: node.type,
           typeLabel: getNodeTypeLabel(node.type),
-          icon: getNodeIcon(node.type),
-          bgColor: style.backgroundColor,
-          connectionCount: connCounts.get(node.id) || 0,
+          bgColor: style.bg,
+          borderColor: style.border,
+          glowColor: style.glow,
+          badgeColor: style.badge,
+          description: node.description || '',
+          nodeId: node.id,
+          methods: node.methods || [],
+          methodCount: node.methods?.length || 0,
         },
       };
     });
   }
 
-  // Grid layout sorted by type rank
   const sorted = [...apiNodes].sort((a, b) => getNodeRank(a.type) - getNodeRank(b.type));
   const cols = Math.min(7, Math.ceil(Math.sqrt(sorted.length * 1.4)));
 
@@ -198,14 +214,19 @@ function layoutNodes(apiNodes: CodeFlowNode[], apiEdges: CodeFlowEdge[]) {
     return {
       id: node.id,
       type: 'codeflow' as const,
-      position: { x: col * (NODE_WIDTH + 50), y: row * (NODE_HEIGHT + 50) },
+      position: { x: col * (NODE_WIDTH + 120), y: row * (NODE_HEIGHT + 120) },
       data: {
         label: node.label,
         nodeType: node.type,
         typeLabel: getNodeTypeLabel(node.type),
-        icon: getNodeIcon(node.type),
-        bgColor: style.backgroundColor,
-        connectionCount: connCounts.get(node.id) || 0,
+        bgColor: style.bg,
+        borderColor: style.border,
+        glowColor: style.glow,
+        badgeColor: style.badge,
+        description: node.description || '',
+        nodeId: node.id,
+        methods: node.methods || [],
+        methodCount: node.methods?.length || 0,
       },
     };
   });
@@ -220,19 +241,39 @@ function buildEdges(apiEdges: CodeFlowEdge[], nodeIds: Set<string>): Edge[] {
         id: `e-${index}`,
         source: edge.source,
         target: edge.target,
-        style: { stroke: color, strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, color, width: 15, height: 15 },
+        style: { stroke: color, strokeWidth: 1.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color, width: 12, height: 12 },
         type: 'smoothstep',
         animated: edge.relation === 'calls',
       };
     });
 }
 
-const PAGE_SIZE = 50;
+function ViewportPanner({ nodeCount }: { nodeCount: number }) {
+  const { fitView } = useReactFlow();
+  const highlightedNodeId = useGraphStore((s) => s.highlightedNodeId);
+
+  useEffect(() => {
+    if (nodeCount > 0) {
+      const timer = setTimeout(() => {
+        fitView({ padding: 0.1, duration: 800, minZoom: 0.4 });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [nodeCount, fitView]);
+
+  useEffect(() => {
+    if (highlightedNodeId) {
+      try {
+        fitView({ nodes: [{ id: highlightedNodeId }], duration: 800, padding: 0.5 });
+      } catch { /* graceful fallback */ }
+    }
+  }, [highlightedNodeId, fitView]);
+
+  return null;
+}
 
 export function CodeFlowGraph({ data }: CodeFlowGraphProps) {
-  const [page, setPage] = useState(0);
-  const [filterType, setFilterType] = useState<NodeType | 'all'>('all');
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
   const onNodeMouseEnter = useCallback((_: unknown, node: Node) => {
@@ -245,54 +286,18 @@ export function CodeFlowGraph({ data }: CodeFlowGraphProps) {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center h-[650px] text-gray-500">
-        <p>No hay datos de flujo de código disponibles para este repositorio.</p>
+      <div className="flex items-center justify-center h-full text-slate-500 text-sm font-medium">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-xl bg-slate-800/50 flex items-center justify-center text-xl">📐</div>
+          <p>No hay datos de flujo de código disponibles para este repositorio.</p>
+        </div>
       </div>
     );
   }
 
-  const typeCounts = useMemo(() => data.nodes.reduce((acc, n) => {
-    acc[n.type] = (acc[n.type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>), [data.nodes]);
+  const visibleNodes = data.nodes;
+  const visibleEdges = data.edges;
 
-  // Filter
-  const filteredNodes = useMemo(() => {
-    if (filterType === 'all') return data.nodes;
-    return data.nodes.filter((n) => n.type === filterType);
-  }, [data.nodes, filterType]);
-
-  // When filtering by type, also include connected nodes from edges
-  const filteredWithConnected = useMemo(() => {
-    if (filterType === 'all') return filteredNodes;
-    const filteredIds = new Set(filteredNodes.map((n) => n.id));
-    // Find nodes connected to filtered nodes
-    const connectedIds = new Set<string>();
-    data.edges.forEach((e) => {
-      if (filteredIds.has(e.source)) connectedIds.add(e.target);
-      if (filteredIds.has(e.target)) connectedIds.add(e.source);
-    });
-    // Add connected nodes that aren't already in the filtered set
-    const connected = data.nodes.filter((n) => connectedIds.has(n.id) && !filteredIds.has(n.id));
-    return [...filteredNodes, ...connected];
-  }, [filteredNodes, filterType, data.nodes, data.edges]);
-
-  const totalPages = Math.ceil(filteredWithConnected.length / PAGE_SIZE);
-  const isLarge = filteredWithConnected.length > PAGE_SIZE;
-
-  // Paginate
-  const visibleNodes = useMemo(() => {
-    if (!isLarge) return filteredWithConnected;
-    return filteredWithConnected.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  }, [filteredWithConnected, page, isLarge]);
-
-  // Edges for visible nodes
-  const visibleEdges = useMemo(() => {
-    const ids = new Set(visibleNodes.map((n) => n.id));
-    return data.edges.filter((e) => ids.has(e.source) && ids.has(e.target));
-  }, [data.edges, visibleNodes]);
-
-  // Highlight edges connected to hovered node
   const styledEdges = useMemo(() => {
     const baseEdges = buildEdges(visibleEdges, new Set(visibleNodes.map((n) => n.id)));
     if (!hoveredNode) return baseEdges;
@@ -302,8 +307,8 @@ export function CodeFlowGraph({ data }: CodeFlowGraphProps) {
         ...edge,
         style: {
           ...edge.style,
-          strokeWidth: isConnected ? 3.5 : 1,
-          opacity: isConnected ? 1 : 0.2,
+          strokeWidth: isConnected ? 2.5 : 1,
+          opacity: isConnected ? 1 : 0.12,
         },
       };
     });
@@ -311,7 +316,6 @@ export function CodeFlowGraph({ data }: CodeFlowGraphProps) {
 
   const flowNodes = useMemo(() => layoutNodes(visibleNodes, visibleEdges), [visibleNodes, visibleEdges]);
 
-  // Dim non-connected nodes on hover
   const styledNodes = useMemo(() => {
     if (!hoveredNode) return flowNodes;
     const connectedIds = new Set<string>([hoveredNode]);
@@ -321,82 +325,14 @@ export function CodeFlowGraph({ data }: CodeFlowGraphProps) {
     });
     return flowNodes.map((node) => ({
       ...node,
-      style: connectedIds.has(node.id) ? {} : { opacity: 0.3 },
+      style: connectedIds.has(node.id) ? {} : { opacity: 0.2 },
     }));
   }, [flowNodes, hoveredNode, visibleEdges]);
 
   return (
-    <div className="flex flex-col h-[650px]">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b bg-white/80 backdrop-blur-sm text-[11px] sticky top-0 z-10">
-        <button
-          onClick={() => { setFilterType('all'); setPage(0); }}
-          className={`px-3 py-1.5 rounded-full font-medium transition-all ${filterType === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-        >
-          Todos ({data.nodes.length})
-        </button>
-        {Object.entries(typeCounts)
-          .sort(([a], [b]) => getNodeRank(a as NodeType) - getNodeRank(b as NodeType))
-          .map(([type, count]) => (
-          <button
-            key={type}
-            onClick={() => { setFilterType(type as NodeType); setPage(0); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium transition-all ${filterType === type ? 'text-white shadow-md scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-            style={filterType === type ? { backgroundColor: getNodeStyle(type as NodeType).backgroundColor } : {}}
-          >
-            <span
-              className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
-              style={{ backgroundColor: getNodeStyle(type as NodeType).backgroundColor }}
-            />
-            {type} ({count})
-          </button>
-        ))}
-
-        <div className="ml-auto flex items-center gap-3 text-gray-400">
-          {isLarge && (
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 disabled:opacity-30 hover:bg-gray-200 font-bold"
-              >
-                ‹
-              </button>
-              <span className="text-[10px] text-gray-500 min-w-[40px] text-center">{page + 1} / {totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 disabled:opacity-30 hover:bg-gray-200 font-bold"
-              >
-                ›
-              </button>
-            </div>
-          )}
-          <span className="text-[10px]">{visibleNodes.length} nodos · {visibleEdges.length} relaciones</span>
-        </div>
-      </div>
-
-      {/* Edge legend */}
-      {visibleEdges.length > 0 && (
-        <div className="flex items-center gap-5 px-3 py-1.5 bg-gray-50/80 border-b text-[10px] text-gray-500">
-          <span className="flex items-center gap-1.5">
-            <span className="w-5 h-[2px] inline-block rounded" style={{ backgroundColor: '#64748b' }} />
-            <span>imports</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-5 h-[2px] inline-block rounded" style={{ backgroundColor: '#d97706' }} />
-            <span>calls</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-5 h-[2px] inline-block rounded" style={{ backgroundColor: '#7c3aed' }} />
-            <span>depends_on</span>
-          </span>
-          <span className="ml-auto text-gray-400 italic">Pasa el cursor sobre un nodo para ver sus conexiones</span>
-        </div>
-      )}
-
-      {/* Graph */}
-      <div className="flex-1 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="flex flex-col h-full">
+      {/* Graph canvas */}
+      <div className="flex-1 overflow-hidden bg-[#0D1526]">
         <ReactFlow
           nodes={styledNodes}
           edges={styledEdges}
@@ -404,19 +340,14 @@ export function CodeFlowGraph({ data }: CodeFlowGraphProps) {
           onNodeMouseEnter={onNodeMouseEnter}
           onNodeMouseLeave={onNodeMouseLeave}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={{ padding: 0.1, minZoom: 0.4 }}
           minZoom={0.15}
           maxZoom={3}
           proOptions={{ hideAttribution: true }}
         >
+          <ViewportPanner nodeCount={styledNodes.length} />
           <Controls position="bottom-left" showInteractive={false} />
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#cbd5e1" />
-          <MiniMap
-            nodeColor={(node) => (node.data as CodeFlowNodeData)?.bgColor || '#6B7280'}
-            maskColor="rgba(0,0,0,0.08)"
-            position="bottom-right"
-            style={{ width: 120, height: 80 }}
-          />
+          <Background variant={BackgroundVariant.Cross} gap={80} size={1.5} color="rgba(100, 140, 200, 0.12)" />
         </ReactFlow>
       </div>
     </div>

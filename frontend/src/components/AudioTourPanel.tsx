@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Play, Square } from "lucide-react";
+import { selectRepresentativeNodes } from "../hooks/useHighlightEngine";
+import { useGraphStore } from "../store/useGraphStore";
 
 interface AudioTourPanelProps {
   summary: string;
@@ -7,21 +9,15 @@ interface AudioTourPanelProps {
 
 type SpeechState = "idle" | "speaking";
 
-/**
- * Busca una voz en español disponible en el navegador.
- * Prioriza es-ES, luego cualquier es-*.
- */
 function findSpanishVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
-
-  // Priorizar es-ES
+  // Prefer high-quality voices
+  const premium = voices.find((v) => v.lang.startsWith("es") && v.name.toLowerCase().includes("google"));
+  if (premium) return premium;
   const esES = voices.find((v) => v.lang === "es-ES");
   if (esES) return esES;
-
-  // Cualquier variante de español
   const esAny = voices.find((v) => v.lang.startsWith("es"));
   if (esAny) return esAny;
-
   return null;
 }
 
@@ -29,110 +25,117 @@ export function AudioTourPanel({ summary }: AudioTourPanelProps) {
   const [state, setState] = useState<SpeechState>("idle");
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
+  const sentenceIndexRef = useRef(0);
+  const representativeNodesRef = useRef<{ id: string }[]>([]);
 
-  const isSpeechAvailable =
-    typeof window !== "undefined" && "speechSynthesis" in window;
+  const isSpeechAvailable = typeof window !== "undefined" && "speechSynthesis" in window;
 
-  // Las voces pueden cargarse de forma asíncrona
+  const nodes = useGraphStore((s) => s.nodes);
+  const startTour = useGraphStore((s) => s.startTour);
+  const stopTour = useGraphStore((s) => s.stopTour);
+  const setHighlightedNode = useGraphStore((s) => s.setHighlightedNode);
+
   useEffect(() => {
     if (!isSpeechAvailable) return;
-
     const handleVoicesChanged = () => setVoicesLoaded(true);
-
-    // Algunas veces ya están cargadas
-    if (window.speechSynthesis.getVoices().length > 0) {
-      setVoicesLoaded(true);
-    }
-
+    if (window.speechSynthesis.getVoices().length > 0) setVoicesLoaded(true);
     window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
-    return () => {
-      window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
-    };
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
   }, [isSpeechAvailable]);
 
   const handlePlay = useCallback(() => {
     if (!isSpeechAvailable || !summary) return;
 
+    // Split summary into sentences for sync
+    const sentences = summary.split(/(?<=[.!?])\s+/).filter(Boolean);
+    const repNodes = selectRepresentativeNodes(nodes);
+    representativeNodesRef.current = repNodes;
+    sentenceIndexRef.current = 0;
+
     const utterance = new SpeechSynthesisUtterance(summary);
     utteranceRef.current = utterance;
-
-    // Configurar idioma español
     utterance.lang = "es-ES";
+    utterance.rate = 0.9; // Slightly slower for clarity
+    utterance.pitch = 1.0;
 
-    // Intentar usar una voz en español
     if (voicesLoaded) {
       const spanishVoice = findSpanishVoice();
-      if (spanishVoice) {
-        utterance.voice = spanishVoice;
-      }
+      if (spanishVoice) utterance.voice = spanishVoice;
     }
+
+    // Sync highlighting with sentence boundaries
+    utterance.onboundary = (event) => {
+      if (event.name === "sentence" && repNodes.length > 0) {
+        sentenceIndexRef.current++;
+        // Map sentence index to node index proportionally
+        const nodeIdx = Math.min(
+          Math.floor((sentenceIndexRef.current / sentences.length) * repNodes.length),
+          repNodes.length - 1
+        );
+        setHighlightedNode(repNodes[nodeIdx].id);
+      }
+    };
 
     utterance.onend = () => {
       setState("idle");
+      stopTour();
+      setHighlightedNode(null);
     };
 
     utterance.onerror = () => {
       setState("idle");
+      stopTour();
+      setHighlightedNode(null);
     };
 
+    // Start
+    window.speechSynthesis.cancel(); // Clear any previous
     window.speechSynthesis.speak(utterance);
     setState("speaking");
-  }, [isSpeechAvailable, summary, voicesLoaded]);
+
+    // Highlight first node immediately
+    if (repNodes.length > 0) {
+      setHighlightedNode(repNodes[0].id);
+    }
+    startTour(repNodes.map((n) => n.id));
+  }, [isSpeechAvailable, summary, voicesLoaded, nodes, startTour, stopTour, setHighlightedNode]);
 
   const handleStop = useCallback(() => {
     if (!isSpeechAvailable) return;
-
     window.speechSynthesis.cancel();
     setState("idle");
-  }, [isSpeechAvailable]);
+    stopTour();
+    setHighlightedNode(null);
+  }, [isSpeechAvailable, stopTour, setHighlightedNode]);
 
-  // Limpiar al desmontar
   useEffect(() => {
     return () => {
-      if (isSpeechAvailable) {
-        window.speechSynthesis.cancel();
-      }
+      if (isSpeechAvailable) window.speechSynthesis.cancel();
     };
   }, [isSpeechAvailable]);
 
   return (
-    <div className="p-4 border-t border-gray-200">
-      <h2 className="text-lg font-semibold mb-2">Audio Tour</h2>
-      <p className="text-sm text-gray-700 mb-4 whitespace-pre-wrap">
-        {summary}
-      </p>
-      <div className="relative inline-block">
-        {state === "idle" ? (
-          <button
-            onClick={handlePlay}
-            disabled={!isSpeechAvailable || !summary}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            aria-label="Reproducir narración"
-            title={
-              !isSpeechAvailable
-                ? "La síntesis de voz no está disponible en este navegador"
-                : undefined
-            }
-          >
-            <Play size={16} />
-            Reproducir
-          </button>
-        ) : (
-          <button
-            onClick={handleStop}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-            aria-label="Detener narración"
-          >
-            <Square size={16} />
-            Detener
-          </button>
-        )}
-        {!isSpeechAvailable && (
-          <p className="text-xs text-amber-600 mt-1">
-            La síntesis de voz no está disponible en este navegador.
-          </p>
-        )}
-      </div>
+    <div className="inline-flex">
+      {state === "idle" ? (
+        <button
+          onClick={handlePlay}
+          disabled={!isSpeechAvailable || !summary}
+          className="flex items-center gap-2 px-4 py-1.5 bg-transparent border border-cyan-500/50 text-cyan-400 text-[11px] font-medium rounded-lg hover:bg-cyan-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          aria-label="Reproducir narración"
+        >
+          <Play size={12} />
+          Escuchar Audio Tour
+        </button>
+      ) : (
+        <button
+          onClick={handleStop}
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-500 transition-colors"
+          aria-label="Detener narración"
+        >
+          <Square size={14} />
+          Detener
+        </button>
+      )}
     </div>
   );
 }

@@ -20,12 +20,15 @@ dependencies = [
     "tree-sitter-c-sharp==0.23.1",
     "fastapi==0.115.6",
     "uvicorn[standard]==0.34.0",
+    "openai>=1.0.0,<2",
+    "python-dotenv>=1.0.0,<2",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest==8.3.4",
     "pytest-cov==6.0.0",
+    "pytest-asyncio>=0.23.0",
     "hypothesis==6.123.1",
 ]
 
@@ -35,6 +38,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=dev_ghost_parser --cov-report=term-missing"
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 source = ["src/dev_ghost_parser"]

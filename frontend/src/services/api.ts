@@ -1,7 +1,7 @@
 import type { AnalysisResponse } from '../types';
 
 const API_BASE_URL = '/analyze';
-const TIMEOUT_MS = 130_000; // 130 seconds
+const TIMEOUT_MS = 600_000; // 10 minutes — accounts for LLM processing of all nodes
 
 /**
  * Sends a repository URL to the backend for analysis.
@@ -48,7 +48,7 @@ export async function analyzeRepo(url: string): Promise<AnalysisResponse> {
     ) {
       if ((error as { name: string }).name === 'AbortError') {
         throw new Error(
-          'La solicitud de análisis expiró después de 130 segundos. El repositorio puede ser muy grande o el servidor está ocupado. Intenta de nuevo más tarde.'
+          'La solicitud de análisis expiró después de 10 minutos. El repositorio puede ser muy grande o el servidor está ocupado. Intenta de nuevo más tarde.'
         );
       }
     }
@@ -66,6 +66,94 @@ export async function analyzeRepo(url: string): Promise<AnalysisResponse> {
     throw new Error(
       'No se pudo conectar al servidor de análisis. Verifica tu conexión a internet e intenta de nuevo.'
     );
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+
+import type { ArtifactsResponse } from '../types';
+
+const ARTIFACTS_URL = '/api/artifacts';
+
+/**
+ * Requests documentation artifacts generation from the backend.
+ */
+export async function generateArtifacts(repoUrl: string): Promise<ArtifactsResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 180_000); // 3 min for LLM generation
+
+  try {
+    const response = await fetch(ARTIFACTS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repo_url: repoUrl }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      let detail = `Error ${response.status}`;
+      try {
+        const errorBody = await response.json();
+        if (errorBody.detail) detail = errorBody.detail;
+      } catch { /* ignore */ }
+      throw new Error(detail);
+    }
+
+    return await response.json();
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('La generación de artefactos expiró. Intenta de nuevo.');
+    }
+    if (error instanceof Error) throw error;
+    throw new Error('Error de conexión al generar artefactos.');
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+
+/**
+ * Requests deep analysis of a specific method/function from the backend LLM.
+ */
+export async function analyzeMethod(params: {
+  methodName: string;
+  componentName: string;
+  componentType: string;
+  allMethods: string[];
+  description: string;
+  dependencies: string[];
+  dependents: string[];
+  sourceCode: string;
+}): Promise<{ analysis: string | null }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+  try {
+    const response = await fetch('/api/analyze-method', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        method_name: params.methodName,
+        component_name: params.componentName,
+        component_type: params.componentType,
+        all_methods: params.allMethods,
+        description: params.description,
+        dependencies: params.dependencies,
+        dependents: params.dependents,
+        source_code: params.sourceCode,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) throw new Error(`Error ${response.status}`);
+    return await response.json();
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('El análisis de la función expiró.');
+    }
+    if (error instanceof Error) throw error;
+    throw new Error('Error de conexión.');
   } finally {
     clearTimeout(timeoutId);
   }

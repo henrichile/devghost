@@ -40,7 +40,7 @@ describe('analyzeRepo', () => {
   it('returns parsed AnalysisResponse on success', async () => {
     const mockResponse: AnalysisResponse = {
       codeFlow: {
-        nodes: [{ id: '1', label: 'UserService', type: 'Service' }],
+        nodes: [{ id: '1', label: 'UserService', type: 'Service', description: '' }],
         edges: [{ source: '1', target: '2', relation: 'imports' }],
       },
       erModel: {
@@ -93,7 +93,7 @@ describe('analyzeRepo', () => {
     );
 
     await expect(analyzeRepo('https://github.com/user/repo')).rejects.toThrow(
-      'Request failed with status 502'
+      'La solicitud falló con estado 502'
     );
   });
 
@@ -114,7 +114,7 @@ describe('analyzeRepo', () => {
     vi.advanceTimersByTime(130_000);
 
     await expect(promise).rejects.toThrow(
-      'The analysis request timed out after 130 seconds'
+      'La solicitud de análisis expiró después de 130 segundos'
     );
   });
 
@@ -123,7 +123,7 @@ describe('analyzeRepo', () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(networkError);
 
     await expect(analyzeRepo('https://github.com/user/repo')).rejects.toThrow(
-      'Unable to connect to the analysis server'
+      'No se pudo conectar al servidor de análisis'
     );
   });
 });

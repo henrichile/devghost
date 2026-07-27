@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy dependency manifests first for cached layer
 COPY package.json package-lock.json ./
 
-# Install dependencies using ci for deterministic builds
-RUN npm ci
+# Install dependencies
+RUN npm install
 
 # Copy all source files
 COPY . .

@@ -9,6 +9,8 @@ vi.mock('@xyflow/react', () => ({
   Background: () => <div />,
   Handle: () => <div />,
   Position: { Top: 'top', Bottom: 'bottom' },
+  BackgroundVariant: { Dots: 'dots', Lines: 'lines', Cross: 'cross' },
+  MarkerType: { ArrowClosed: 'arrowclosed' },
 }));
 
 describe('ERDatabaseGraph', () => {
@@ -16,7 +18,7 @@ describe('ERDatabaseGraph', () => {
     render(<ERDatabaseGraph entities={[]} relations={[]} />);
 
     expect(
-      screen.getByText(/no er model data available/i)
+      screen.getByText(/no hay datos del modelo er/i)
     ).toBeInTheDocument();
   });
 });

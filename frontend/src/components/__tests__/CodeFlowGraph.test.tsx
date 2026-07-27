@@ -7,6 +7,12 @@ vi.mock('@xyflow/react', () => ({
   ReactFlow: ({ children }: { children: React.ReactNode }) => <div data-testid="reactflow">{children}</div>,
   Controls: () => <div />,
   Background: () => <div />,
+  BackgroundVariant: { Dots: 'dots', Lines: 'lines', Cross: 'cross' },
+  MarkerType: { ArrowClosed: 'arrowclosed' },
+  MiniMap: () => <div />,
+  useReactFlow: () => ({ fitView: vi.fn() }),
+  Handle: () => <div />,
+  Position: { Top: 'top', Bottom: 'bottom' },
 }));
 
 describe('CodeFlowGraph', () => {
@@ -14,7 +20,7 @@ describe('CodeFlowGraph', () => {
     render(<CodeFlowGraph data={null} />);
 
     expect(
-      screen.getByText(/no code flow data available/i)
+      screen.getByText(/no hay datos de flujo de código/i)
     ).toBeInTheDocument();
   });
 });

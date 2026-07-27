@@ -13,17 +13,12 @@ describe('App module', () => {
   });
 
   it('imports all required child components', async () => {
-    // Verify that all component modules can be resolved
-    const header = await import('./components/Header');
-    const tabView = await import('./components/TabView');
+    const dashboardLayout = await import('./components/DashboardLayout');
     const audioTour = await import('./components/AudioTourPanel');
-    const errorBanner = await import('./components/ErrorBanner');
     const loadingIndicator = await import('./components/LoadingIndicator');
 
-    expect(header.Header).toBeDefined();
-    expect(tabView.TabView).toBeDefined();
+    expect(dashboardLayout.DashboardLayout).toBeDefined();
     expect(audioTour.AudioTourPanel).toBeDefined();
-    expect(errorBanner.ErrorBanner).toBeDefined();
     expect(loadingIndicator.LoadingIndicator).toBeDefined();
   });
 

@@ -88,35 +88,36 @@ class TestEmptyCodebase:
 # ---------------------------------------------------------------------------
 
 class TestSentenceCount:
-    """Summary must be at most 3 sentences."""
+    """Summary must be 3 to 4 sentences."""
 
-    def test_only_code_flow_produces_one_sentence(self):
+    def test_only_code_flow_produces_two_sentences(self):
+        """With only nodes (no entities), should produce sentence 1 + sentence 3."""
         result = sg.generate(_make_code_flow("Service"), ERResult(), "/p")
         sentences = [s.strip() for s in result.split(".") if s.strip()]
-        assert len(sentences) <= 3
+        assert 2 <= len(sentences) <= 4
 
-    def test_code_flow_and_entities_produce_two_sentences(self):
+    def test_code_flow_and_entities_produce_three_or_four_sentences(self):
         result = sg.generate(
             _make_code_flow("Service", "Utility"),
             _make_er_result("User", "Order"),
             "/p",
         )
-        # Split by period; trailing empty strings don't count.
+        # Should produce sentence 1 + sentence 2 + sentence 3 (+ optional sentence 4)
         sentences = [s.strip() for s in result.split(".") if s.strip()]
-        assert len(sentences) == 2
+        assert 3 <= len(sentences) <= 4
 
     def test_failed_subsystem_adds_warning_sentence(self):
         result = sg.generate(_make_code_flow("Service"), None, "/p")
         assert _INCOMPLETE_WARNING in result
 
-    def test_full_result_stays_at_most_three_sentences(self):
+    def test_full_result_stays_at_most_four_sentences(self):
         result = sg.generate(
             _make_code_flow("Controller", "Service"),
             _make_er_result("User"),
             "/p",
         )
         sentences = [s.strip() for s in result.split(".") if s.strip()]
-        assert len(sentences) <= 3
+        assert len(sentences) <= 4
 
 
 # ---------------------------------------------------------------------------
@@ -134,17 +135,17 @@ class TestPatternInference:
         result = sg.generate(
             _make_code_flow("Service", "Service", "Utility"), ERResult(), "/p"
         )
-        assert "service-oriented" in result
+        assert "orientado a servicios" in result
 
     def test_route_dominant_gives_routing_based(self):
         result = sg.generate(
             _make_code_flow("Route", "Route", "Utility"), ERResult(), "/p"
         )
-        assert "routing-based" in result
+        assert "basado en rutas" in result
 
     def test_utility_only_gives_utility_based(self):
         result = sg.generate(_make_code_flow("Utility", "Utility"), ERResult(), "/p")
-        assert "utility-based" in result
+        assert "basado en utilidades" in result
 
     def test_controller_takes_priority_over_service(self):
         """Even one Controller should override a dominant Service."""
@@ -154,6 +155,78 @@ class TestPatternInference:
             "/p",
         )
         assert "model-view-controller" in result
+
+
+# ---------------------------------------------------------------------------
+# Spanish type names in component breakdown (Req 3.3)
+# ---------------------------------------------------------------------------
+
+class TestSpanishTypeNames:
+    """Summary must use Spanish architectural type names."""
+
+    def test_controller_type_uses_spanish_name(self):
+        result = sg.generate(
+            _make_code_flow("Controller", "Controller"),
+            _make_er_result("User"),
+            "/p",
+        )
+        assert "controladores" in result
+
+    def test_service_type_uses_spanish_name(self):
+        result = sg.generate(
+            _make_code_flow("Service", "Service"),
+            _make_er_result("User"),
+            "/p",
+        )
+        assert "servicios" in result
+
+    def test_route_type_uses_spanish_name(self):
+        result = sg.generate(
+            _make_code_flow("Route"),
+            _make_er_result("User"),
+            "/p",
+        )
+        assert "ruta" in result
+
+    def test_singular_controller_uses_singular(self):
+        result = sg.generate(
+            _make_code_flow("Controller"),
+            _make_er_result("User"),
+            "/p",
+        )
+        assert "1 controlador" in result
+
+    def test_component_breakdown_present(self):
+        result = sg.generate(
+            _make_code_flow("Controller", "Service", "Route"),
+            _make_er_result("User"),
+            "/p",
+        )
+        assert "Los componentes incluyen" in result
+
+
+# ---------------------------------------------------------------------------
+# Sentence 4 — general purpose inference
+# ---------------------------------------------------------------------------
+
+class TestPurposeInference:
+    """Sentence 4 provides general purpose when inferable."""
+
+    def test_controller_and_repository_infers_data_management(self):
+        result = sg.generate(
+            _make_code_flow("Controller", "Repository"),
+            _make_er_result("User"),
+            "/p",
+        )
+        assert "El sistema parece orientado a" in result
+
+    def test_utility_only_has_no_purpose_sentence(self):
+        result = sg.generate(
+            _make_code_flow("Utility"),
+            _make_er_result("User"),
+            "/p",
+        )
+        assert "El sistema parece orientado a" not in result
 
 
 # ---------------------------------------------------------------------------
@@ -175,11 +248,14 @@ class TestEntityListing:
     def test_only_first_three_entities_listed(self):
         result = sg.generate(
             _make_code_flow("Service"),
-            _make_er_result("A", "B", "C", "D", "E"),
+            _make_er_result("Alpha", "Beta", "Gamma", "Delta", "Epsilon"),
             "/p",
         )
-        assert "D" not in result
-        assert "E" not in result
+        assert "Alpha" in result
+        assert "Beta" in result
+        assert "Gamma" in result
+        assert "Delta" not in result
+        assert "Epsilon" not in result
 
     def test_entity_count_mentioned(self):
         result = sg.generate(

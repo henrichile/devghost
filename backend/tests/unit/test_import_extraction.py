@@ -283,15 +283,17 @@ class TestBuildResolutionMaps:
             Node(id="def456", label="UserController", type="Controller"),
         ]
         rel_paths = ["services/OrderService.ts", "controllers/UserController.ts"]
-        path_no_ext, stem, full_path = _build_resolution_maps(nodes, rel_paths)
+        path_no_ext, stem, full_path, label_to_id = _build_resolution_maps(nodes, rel_paths)
 
         assert path_no_ext["services/OrderService"] == "abc123"
         assert stem["OrderService"] == "abc123"
         assert full_path["services/OrderService.ts"] == "abc123"
+        assert label_to_id["OrderService"] == "abc123"
 
         assert path_no_ext["controllers/UserController"] == "def456"
         assert stem["UserController"] == "def456"
         assert full_path["controllers/UserController.ts"] == "def456"
+        assert label_to_id["UserController"] == "def456"
 
 
 class TestResolveImport:
@@ -306,13 +308,13 @@ class TestResolveImport:
             "controllers/UserController.ts",
             "utils.py",
         ]
-        self.path_no_ext, self.stem, self.full_path = _build_resolution_maps(nodes, rel_paths)
+        self.path_no_ext, self.stem, self.full_path, self.label_to_id = _build_resolution_maps(nodes, rel_paths)
 
     def test_relative_path_resolves(self):
         result = _resolve_import(
             "../services/OrderService",
             "controllers/UserController.ts",
-            self.path_no_ext, self.stem, self.full_path,
+            self.path_no_ext, self.stem, self.full_path, self.label_to_id,
         )
         assert result == "svc_id"
 
@@ -320,7 +322,7 @@ class TestResolveImport:
         result = _resolve_import(
             "OrderService",
             "controllers/UserController.ts",
-            self.path_no_ext, self.stem, self.full_path,
+            self.path_no_ext, self.stem, self.full_path, self.label_to_id,
         )
         assert result == "svc_id"
 
@@ -328,7 +330,7 @@ class TestResolveImport:
         result = _resolve_import(
             "nonexistent",
             "main.ts",
-            self.path_no_ext, self.stem, self.full_path,
+            self.path_no_ext, self.stem, self.full_path, self.label_to_id,
         )
         assert result is None
 
@@ -336,6 +338,6 @@ class TestResolveImport:
         result = _resolve_import(
             "utils",
             "main.py",
-            self.path_no_ext, self.stem, self.full_path,
+            self.path_no_ext, self.stem, self.full_path, self.label_to_id,
         )
         assert result == "utils_id"

@@ -18,7 +18,7 @@ from typing import Literal, Optional
 # ---------------------------------------------------------------------------
 
 NodeType = Literal[
-    "Controller", "Service", "Route", "Middleware", "Repository", "Utility"
+    "Controller", "Service", "Route", "Middleware", "Repository", "Utility", "Config"
 ]
 
 EdgeRelation = Literal["imports", "calls", "depends_on"]
@@ -30,12 +30,27 @@ RelationType = Literal["one-to-one", "one-to-many", "many-to-many", "unknown"]
 class Node:
     """A graph node representing a source file or architectural unit.
 
-    Satisfies Requirements 1.2, 4.3.
+    Satisfies Requirements 1.2, 1.5, 4.3, 7.1, 2.1.
     """
 
     id: str          # Unique stable identifier — SHA-1 of the relative path
     label: str       # Class name (if found) or filename without extension
     type: NodeType   # Architectural category
+    description: str = ""  # ≤120 chars, Spanish purpose description
+    method_names: list[str] = field(default_factory=list)  # Extracted method names (max 15)
+
+
+@dataclass
+class FileContext:
+    """Context extracted from a source file for description generation.
+
+    Used by Description_Generator to produce meaningful node descriptions
+    based on available file-level information.
+    """
+
+    imports: list[str] = field(default_factory=list)
+    class_name: str | None = None
+    method_names: list[str] = field(default_factory=list)
 
 
 @dataclass

@@ -1,0 +1,16 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- C:\Python314\python.exe
+hypothesis profile 'default' -> database=DirectoryBasedExampleDatabase(WindowsPath('z:/home/Proyectos/hackaton kiro/backend/.hypothesis/examples'))
+rootdir: z:\home\Proyectos\hackaton kiro\backend
+configfile: pyproject.toml
+plugins: anyio-4.14.2, hypothesis-6.123.1, asyncio-1.4.0, cov-6.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/test_property_use_case_prompt_completeness.py::TestProperty1PromptCompleteness::test_prompt_contains_all_method_names PASSED [ 33%]
+tests/test_property_use_case_prompt_completeness.py::TestProperty1PromptCompleteness::test_prompt_contains_all_service_labels PASSED [ 66%]
+tests/test_property_use_case_prompt_completeness.py::TestProperty1PromptCompleteness::test_prompt_contains_all_middleware_labels PASSED [100%]
+
+============================== 3 passed in 5.90s ==============================
+
+---STDERR---

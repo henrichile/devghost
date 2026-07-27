@@ -146,7 +146,7 @@ class TestValidationPassesSubsystemsInvoked:
             result = _parse(parser.analyze(tmpdir))
             assert (
                 result["summary"]
-                == "No analyzable source files were found in the provided codebase."
+                == "No se encontraron archivos de codigo fuente analizables en la base de codigo proporcionada."
             )
 
     def test_codeflow_has_nodes_and_edges(self, parser: DevGhost_Parser) -> None:

@@ -1,0 +1,26 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-8.3.4, pluggy-1.6.0
+rootdir: Z:\home\Proyectos\hackaton kiro\backend
+configfile: pyproject.toml
+plugins: anyio-4.14.2, hypothesis-6.123.1, cov-6.0.0
+collected 1 item
+
+tests\property\test_property_domain_inference.py F                       [100%]
+
+================================== FAILURES ===================================
+___________________ test_property_10_case_insensitive_match ___________________
+tests\property\test_property_domain_inference.py:191: in test_property_10_case_insensitive_match
+    keyword=st.sampled_from(_ALL_KEYWORDS),
+tests\property\test_property_domain_inference.py:210: in test_property_10_case_insensitive_match
+    assert result == expected_domain, (
+E   AssertionError: Expected domain 'gesti¾n de ventas' for uppercase entity 'VENTA', but got 'control de inventario'
+E   assert 'control de inventario' == 'gesti¾n de ventas'
+E     
+E     - gesti¾n de ventas
+E     + control de inventario
+E   Falsifying example: test_property_10_case_insensitive_match(
+E       keyword='venta',
+E   )
+=========================== short test summary info ===========================
+FAILED tests/property/test_property_domain_inference.py::test_property_10_case_insensitive_match
+============================== 1 failed in 0.47s ==============================

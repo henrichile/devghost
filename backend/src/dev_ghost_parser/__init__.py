@@ -17,6 +17,7 @@ import os
 
 from .code_flow_analyzer import Code_Flow_Analyzer
 from .er_extractor import ER_Extractor
+from .llm_client import LLM_Client
 from .models import CodeFlowResult, ERResult, SubsystemError
 from .output_serializer import Output_Serializer
 from .summary_generator import Summary_Generator
@@ -155,10 +156,13 @@ class DevGhost_Parser:
         """
         subsystem_errors: list[SubsystemError] = []
 
+        # --- LLM_Client (shared instance, reads env vars once) ---
+        llm_client = LLM_Client()
+
         # --- Code_Flow_Analyzer (Req 5.6) ---
         code_flow_result: CodeFlowResult | None = None
         try:
-            code_flow_result = Code_Flow_Analyzer().analyze(path)
+            code_flow_result = Code_Flow_Analyzer(llm_client=llm_client).analyze(path)
         except Exception as exc:
             subsystem_errors.append(
                 SubsystemError(subsystem="Code_Flow_Analyzer", message=str(exc))
@@ -178,7 +182,7 @@ class DevGhost_Parser:
         # wrap it defensively to honour the "never propagate exceptions" contract.
         summary: str | None = None
         try:
-            summary = Summary_Generator().generate(code_flow_result, er_result, path)
+            summary = Summary_Generator(llm_client=llm_client).generate(code_flow_result, er_result, path)
         except Exception as exc:
             subsystem_errors.append(
                 SubsystemError(subsystem="Summary_Generator", message=str(exc))

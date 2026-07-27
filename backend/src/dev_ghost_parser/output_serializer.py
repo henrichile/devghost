@@ -27,7 +27,13 @@ def _code_flow_to_dict(code_flow: CodeFlowResult) -> dict:
     """Convert a CodeFlowResult to a serializable dict."""
     return {
         "nodes": [
-            {"id": node.id, "label": node.label, "type": node.type}
+            {
+                "id": node.id,
+                "label": node.label,
+                "type": node.type,
+                "description": node.description,
+                "methods": node.method_names[:10],  # Cap a 10 para la API
+            }
             for node in code_flow.nodes
         ],
         "edges": [

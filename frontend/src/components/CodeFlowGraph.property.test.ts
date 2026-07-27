@@ -8,7 +8,7 @@ import type { NodeType } from '../types';
  *
  * For any two CodeFlowNode values with different type fields, the
  * node-type-to-visual-style mapping function SHALL return different
- * background colors (or icons), ensuring visual distinguishability.
+ * badge colors (or icons), ensuring visual distinguishability.
  *
  * **Validates: Requirements 3.5**
  */
@@ -24,7 +24,7 @@ describe('Property 2: Distinct node types produce distinct visual indicators', (
 
   const nodeTypeArb = fc.constantFrom<NodeType>(...allNodeTypes);
 
-  it('distinct node types produce distinct background colors', () => {
+  it('distinct node types produce distinct badge colors', () => {
     fc.assert(
       fc.property(
         nodeTypeArb,
@@ -33,19 +33,19 @@ describe('Property 2: Distinct node types produce distinct visual indicators', (
           fc.pre(type1 !== type2);
           const style1 = getNodeStyle(type1);
           const style2 = getNodeStyle(type2);
-          expect(style1.backgroundColor).not.toBe(style2.backgroundColor);
+          expect(style1.badge).not.toBe(style2.badge);
         }
       ),
       { numRuns: 100 }
     );
   });
 
-  it('every node type returns a non-empty background color', () => {
+  it('every node type returns a non-empty badge color', () => {
     fc.assert(
       fc.property(nodeTypeArb, (type) => {
         const style = getNodeStyle(type);
-        expect(style.backgroundColor).toBeDefined();
-        expect(style.backgroundColor.length).toBeGreaterThan(0);
+        expect(style.badge).toBeDefined();
+        expect(style.badge.length).toBeGreaterThan(0);
       }),
       { numRuns: 100 }
     );
