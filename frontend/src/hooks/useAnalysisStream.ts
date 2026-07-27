@@ -13,7 +13,7 @@ export interface UseAnalysisStreamReturn {
   retry: () => void;
 }
 
-const INACTIVITY_TIMEOUT_MS = 120_000;
+const INACTIVITY_TIMEOUT_MS = 300_000;
 
 /**
  * React hook for consuming SSE events from the /analyze-stream endpoint.
@@ -60,7 +60,7 @@ export function useAnalysisStream(): UseAnalysisStreamReturn {
 
       const handleTimeout = () => {
         controller.abort();
-        setError('Conexión perdida: no se recibieron datos en 120 segundos');
+        setError('Conexión perdida: no se recibieron datos en 5 minutos');
         setStatus('error');
       };
 
