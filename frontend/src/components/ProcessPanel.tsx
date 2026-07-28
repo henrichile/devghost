@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import type { AgentEvent, AgentPanelEntry } from '../types/streaming';
 import { formatElapsedTime, formatDuration, truncateMessage } from '../utils/formatters';
 import { GhostLoader } from './GhostLoader';
@@ -78,6 +78,13 @@ function buildEntries(events: AgentEvent[], startTime: number): AgentPanelEntry[
 export function ProcessPanel({ events, startTime }: ProcessPanelProps) {
   const logRef = useRef<HTMLDivElement>(null);
   const isAutoScrolling = useRef(true);
+  const [now, setNow] = useState(Date.now());
+
+  // Update timer every second
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const entries = useMemo(() => buildEntries(events, startTime), [events, startTime]);
 
@@ -98,7 +105,7 @@ export function ProcessPanel({ events, startTime }: ProcessPanelProps) {
   const progress = Math.min(95, (completedCount / totalAgents) * 100);
 
   // Estimate remaining time based on completed agents
-  const elapsed = Date.now() - startTime;
+  const elapsed = now - startTime;
   const getEstimate = () => {
     if (completedCount === 0) {
       if (elapsed < 30000) return 'Estimado: 2-4 minutos';
@@ -170,7 +177,7 @@ export function ProcessPanel({ events, startTime }: ProcessPanelProps) {
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
               {completedCount}/{totalAgents} agentes
             </span>
-            <span className="font-mono text-slate-500">{formatElapsedTime(Date.now() - startTime).replace('+', '')} transcurridos</span>
+            <span className="font-mono text-slate-500">{formatElapsedTime(now - startTime).replace('+', '')} transcurridos</span>
           </div>
           <div className="text-center mt-2">
             <span className="text-[11px] text-slate-600 italic">{getEstimate()}</span>
