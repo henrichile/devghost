@@ -169,8 +169,8 @@ export function DashboardLayout({ response, repoUrl, artifacts, onNewAnalysis }:
           )}
         </main>
 
-        {/* RIGHT SIDEBAR: Inspection Panel */}
-        <InspectionPanel />
+        {/* RIGHT SIDEBAR: Inspection Panel (only on codeflow tab) */}
+        {activeTab === 'codeflow' && <InspectionPanel />}
       </div>
     </div>
   );
