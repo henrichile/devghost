@@ -61,22 +61,22 @@ export function DashboardLayout({ response, repoUrl, artifacts, onNewAnalysis }:
       {/* ══════════════════════════════════════════════════════════════════
           TOP NAVIGATION BAR
       ══════════════════════════════════════════════════════════════════ */}
-      <header className="shrink-0 h-12 bg-[#0A0E17] border-b border-white/[0.06] px-4 flex items-center gap-3 z-50">
+      <header className="shrink-0 h-14 bg-[#0A0E17] border-b border-white/[0.06] px-5 flex items-center gap-3 z-50">
 
         {/* Logo + Repo */}
         <button
           onClick={onNewAnalysis}
-          className="shrink-0 flex items-center gap-2 group cursor-pointer"
+          className="shrink-0 flex items-center gap-2.5 group cursor-pointer"
         >
-          <div className="w-7 h-7 rounded-lg bg-cyan-600 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-              <path d="M12 3C8 3 5 7 5 12v8l2.5-2 2.5 2 2.5-2 2.5 2 2.5-2L20 20v-8c0-5-3-9-8-9z" />
-              <circle cx="9.5" cy="10" r="1.5" fill="white" stroke="none" />
-              <circle cx="14.5" cy="10" r="1.5" fill="white" stroke="none" />
-            </svg>
-          </div>
-          <span className="text-[13px] font-bold text-white">
-            dev<span className="text-cyan-400">.ghost</span><span className="text-slate-400">()</span>
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+            <path d="M16 4C10.477 4 6 8.477 6 14v10c0 0.5 0.5 1 1 0.5l2-2 2 2 2-2 2 2 2-2 2 2 2-2 2 2c0.5 0.5 1 0 1-0.5V14c0-5.523-4.477-10-10-10z" fill="url(#hg)" opacity="0.95"/>
+            <circle cx="12.5" cy="14" r="2" fill="#1e293b"/>
+            <circle cx="19.5" cy="14" r="2" fill="#1e293b"/>
+            <path d="M11 19l-2 1.5 2 1.5M21 19l2 1.5-2 1.5M14.5 23l3-5" stroke="#1e293b" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/>
+            <defs><linearGradient id="hg" x1="6" y1="4" x2="26" y2="28" gradientUnits="userSpaceOnUse"><stop stopColor="#818cf8"/><stop offset="1" stopColor="#6366f1"/></linearGradient></defs>
+          </svg>
+          <span className="text-[14px] font-bold text-white font-mono tracking-tight">
+            <span className="text-indigo-400">dev</span><span className="text-slate-500">.</span><span className="text-white">ghost</span><span className="text-slate-500">()</span>
           </span>
         </button>
 
