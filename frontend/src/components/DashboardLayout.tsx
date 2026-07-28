@@ -6,7 +6,6 @@ import { ERDatabaseGraph } from './ERDatabaseGraph';
 import { DocumentationPanel } from './DocumentationPanel';
 import { InspectionPanel } from './InspectionPanel';
 import { SystemReportTab } from './SystemReportTab';
-import { OnboardingTour } from './OnboardingTour';
 import { useGraphStore } from '../store/useGraphStore';
 
 interface DashboardLayoutProps {
@@ -58,7 +57,6 @@ export function DashboardLayout({ response, repoUrl, artifacts, onNewAnalysis }:
 
   return (
     <div className="h-screen flex flex-col bg-[#060911] text-white overflow-hidden font-sans">
-      <OnboardingTour />
 
       {/* ══════════════════════════════════════════════════════════════════
           TOP NAVIGATION BAR
