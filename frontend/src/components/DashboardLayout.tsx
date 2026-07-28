@@ -43,9 +43,9 @@ export function DashboardLayout({ response, repoUrl, artifacts, onNewAnalysis }:
   const [activeTab, setActiveTab] = useState<MainTab>('codeflow');
   const nodeInspections = useGraphStore((s) => s.nodeInspections);
 
-  const nodeCount = response.codeFlow?.nodes.length || 0;
-  const entityCount = response.erModel?.entities.length || 0;
-  const edgeCount = response.codeFlow?.edges.length || 0;
+  const nodeCount = response.codeFlow?.nodes?.length || 0;
+  const entityCount = response.erModel?.entities?.length || 0;
+  const edgeCount = response.codeFlow?.edges?.length || 0;
   const repoName = extractRepoName(repoUrl);
   const globalScore = extractGlobalScore(nodeInspections);
 
