@@ -61,7 +61,7 @@ export function DashboardLayout({ response, repoUrl, artifacts, onNewAnalysis }:
       {/* ══════════════════════════════════════════════════════════════════
           TOP NAVIGATION BAR
       ══════════════════════════════════════════════════════════════════ */}
-      <header className="shrink-0 h-14 bg-[#0A0E17] border-b border-white/[0.06] px-5 flex items-center gap-3 z-50">
+      <header className="shrink-0 h-20 bg-[#0A0E17] border-b border-white/[0.06] px-5 flex items-center gap-3 z-50">
 
         {/* Logo + Repo */}
         <button
