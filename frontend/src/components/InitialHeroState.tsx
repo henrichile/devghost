@@ -5,8 +5,6 @@ export interface HeroProps {
 }
 
 const SAMPLE_REPOS = [
-  { label: 'laravel/framework', url: 'https://github.com/laravel/framework' },
-  { label: 'fastapi/fastapi', url: 'https://github.com/fastapi/fastapi' },
   { label: 'henrichile/AsistenciaSTM', url: 'https://github.com/henrichile/AsistenciaSTM', highlight: true },
 ];
 
