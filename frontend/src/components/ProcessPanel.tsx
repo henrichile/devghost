@@ -97,6 +97,22 @@ export function ProcessPanel({ events, startTime }: ProcessPanelProps) {
   const totalAgents = 5;
   const progress = Math.min(95, (completedCount / totalAgents) * 100);
 
+  // Estimate remaining time based on completed agents
+  const elapsed = Date.now() - startTime;
+  const getEstimate = () => {
+    if (completedCount === 0) {
+      if (elapsed < 30000) return 'Estimado: 2-4 minutos';
+      if (elapsed < 90000) return 'Procesando repo grande...';
+      return 'Repos grandes pueden tardar varios minutos';
+    }
+    // Calculate average time per agent and extrapolate
+    const avgPerAgent = elapsed / completedCount;
+    const remaining = (totalAgents - completedCount) * avgPerAgent;
+    if (remaining < 30000) return 'Casi listo...';
+    if (remaining < 60000) return `~${Math.ceil(remaining / 1000)}s restantes`;
+    return `~${Math.ceil(remaining / 60000)} min restantes`;
+  };
+
   useEffect(() => {
     if (isAutoScrolling.current && logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -132,7 +148,10 @@ export function ProcessPanel({ events, startTime }: ProcessPanelProps) {
             Analizando repositorio
           </h2>
           <p className="text-[13px] text-slate-500 leading-relaxed mt-2">
-            Agentes autónomos procesando en paralelo. Progreso en tiempo real.
+            {completedCount === 0 && 'Fase fundacional: analizando estructura del código...'}
+            {completedCount === 1 && 'Análisis AST completado. Lanzando agentes en paralelo...'}
+            {completedCount >= 2 && completedCount < 5 && `${completedCount} agentes completados. Procesando con IA...`}
+            {completedCount === 5 && 'Todos los agentes finalizaron. Preparando resultados...'}
           </p>
         </div>
 
@@ -152,6 +171,9 @@ export function ProcessPanel({ events, startTime }: ProcessPanelProps) {
               {completedCount}/{totalAgents} agentes
             </span>
             <span className="font-mono text-slate-500">{formatElapsedTime(Date.now() - startTime).replace('+', '')} transcurridos</span>
+          </div>
+          <div className="text-center mt-2">
+            <span className="text-[11px] text-slate-600 italic">{getEstimate()}</span>
           </div>
         </div>
 
