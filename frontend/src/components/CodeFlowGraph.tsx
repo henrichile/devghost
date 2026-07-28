@@ -295,8 +295,8 @@ export function CodeFlowGraph({ data }: CodeFlowGraphProps) {
     );
   }
 
-  const visibleNodes = data.nodes;
-  const visibleEdges = data.edges;
+  const visibleNodes = data?.nodes || [];
+  const visibleEdges = data?.edges || [];
 
   const styledEdges = useMemo(() => {
     const baseEdges = buildEdges(visibleEdges, new Set(visibleNodes.map((n) => n.id)));
