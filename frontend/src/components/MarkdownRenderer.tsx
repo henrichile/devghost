@@ -50,8 +50,11 @@ function normalizeMarkdown(raw: string): string {
   let text = raw;
 
   // Remove code fence wrappers if the entire content is wrapped
-  text = text.replace(/^```(?:markdown|md)?\n?/i, '');
-  text = text.replace(/\n?```\s*$/i, '');
+  // BUT NOT if it's a mermaid block
+  if (!text.trimStart().startsWith('```mermaid')) {
+    text = text.replace(/^```(?:markdown|md)?\n?/i, '');
+    text = text.replace(/\n?```\s*$/i, '');
+  }
 
   // FIX: Detect unwrapped mermaid code (starts with "mermaid " or line starts with diagram type)
   // Pattern: "mermaid classDiagram ..." or "mermaid flowchart ..." without backticks
